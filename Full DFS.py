@@ -369,86 +369,83 @@ class EasyComputer:
 class HardComputer(EasyComputer):
     def __init__(self):
         super().__init__()
-        self.moves = []
-
+        self.stack = []          # DFS stack
+        self.visited = set()     # visited cells
+        self.hunting = True      # hunt vs dfs mode
 
     def makeAttack(self, gamelogic):
-        if len(self.moves) == 0:
-            COMPTURNTIMER = pygame.time.get_ticks()
-            if COMPTURNTIMER - TURNTIMER >= 3000:
-                validChoice = False
-                while not validChoice:
-                    rowX = random.randint(0, 9)
-                    rowY = random.randint(0, 9)
+        # --- DFS MODE ---
+        if self.stack:
+            x, y = self.stack.pop()
 
-                    if gamelogic[rowX][rowY] == ' ' or gamelogic[rowX][rowY] == 'O':
-                        validChoice = True
+            if (x, y) in self.visited:
+                return True
 
-                if gamelogic[rowX][rowY] == 'O':
-                    TOKENS.append(
-                        Tokens(REDTOKEN, pGameGrid[rowX][rowY], 'Hit', FIRETOKENIMAGELIST, EXPLOSIONIMAGELIST, None))
-                    gamelogic[rowX][rowY] = 'T'
-                    SHOTSOUND.play()
-                    HITSOUND.play()
-                    self.generateMoves((rowX, rowY), gamelogic)
-                    self.turn = False
-                else:
-                    gamelogic[rowX][rowY] = 'X'
-                    TOKENS.append(Tokens(BLUETOKEN, pGameGrid[rowX][rowY], 'Miss', None, None, None))
-                    SHOTSOUND.play()
-                    MISSSOUND.play()
-                    self.turn = False
+            self.visited.add((x, y))
 
-        elif len(self.moves) > 0:
-            COMPTURNTIMER = pygame.time.get_ticks()
-            if COMPTURNTIMER - TURNTIMER >= 2000:
-                rowX, rowY = self.moves[0]
-                TOKENS.append(Tokens(REDTOKEN, pGameGrid[rowX][rowY], 'Hit', FIRETOKENIMAGELIST, EXPLOSIONIMAGELIST, None))
-                gamelogic[rowX][rowY] = 'T'
-                SHOTSOUND.play()
-                HITSOUND.play()
-                self.moves.remove((rowX, rowY))
+            if gamelogic[x][y] == 'O':  # HIT
+                gamelogic[x][y] = 'T'
+                TOKENS.append(Tokens(
+                    REDTOKEN, pGameGrid[x][y], 'Hit',
+                    FIRETOKENIMAGELIST, EXPLOSIONIMAGELIST, None
+                ))
+
+                neighbors = list(self.get_neighbors(x, y))
+                random.shuffle(neighbors)
+                for n in neighbors:
+                    self.stack.append(n)
+
+                # Push neighbors (DFS)
+                for nx, ny in self.get_neighbors(x, y):
+                    if (nx, ny) not in self.visited:
+                        self.stack.append((nx, ny))
+
                 self.turn = False
-        return self.turn
+                return False
 
+            elif gamelogic[x][y] == ' ':
+                gamelogic[x][y] = 'X'
+                TOKENS.append(Tokens(
+                    BLUETOKEN, pGameGrid[x][y], 'Miss',
+                    None, None, None
+                ))
+                self.turn = False
+                return False
 
-    def generateMoves(self, coords, grid, lstDir=None):
-        x, y = coords
-        nx, ny = 0, 0
-        for direction in ['North', 'South', 'East', 'West']:
-            if direction == 'North' and lstDir != 'North':
-                nx = x - 1
-                ny = y
-                if not (nx > 9 or ny > 9 or nx < 0 or ny < 0):
-                    if (nx, ny) not in self.moves and grid[nx][ny] == 'O':
-                        self.moves.append((nx, ny))
-                        self.generateMoves((nx, ny), grid, 'South')
+        # --- HUNT MODE ---
+        for i in range(10):
+            for j in range(10):
+                if (i, j) not in self.visited and gamelogic[i][j] in (' ', 'O'):
+                    self.visited.add((i, j))
 
-            if direction == 'South' and lstDir != 'South':
-                nx = x + 1
-                ny = y
-                if not (nx > 9 or ny > 9 or nx < 0 or ny < 0):
-                    if (nx, ny) not in self.moves and grid[nx][ny] == 'O':
-                        self.moves.append((nx, ny))
-                        self.generateMoves((nx, ny), grid, 'North')
+                    if gamelogic[i][j] == 'O':  # HIT
+                        gamelogic[i][j] = 'T'
+                        TOKENS.append(Tokens(
+                            REDTOKEN, pGameGrid[i][j], 'Hit',
+                            FIRETOKENIMAGELIST, EXPLOSIONIMAGELIST, None
+                        ))
 
-            if direction == 'East' and lstDir != 'East':
-                nx = x
-                ny = y + 1
-                if not (nx > 9 or ny > 9 or nx < 0 or ny < 0):
-                    if (nx, ny) not in self.moves and grid[nx][ny] == 'O':
-                        self.moves.append((nx, ny))
-                        self.generateMoves((nx, ny), grid, 'West')
+                        # Seed DFS from hit
+                        for nx, ny in self.get_neighbors(i, j):
+                            self.stack.append((nx, ny))
 
-            if direction == 'West' and lstDir != 'West':
-                nx = x
-                ny = y - 1
-                if not (nx > 9 or ny > 9 or nx < 0 or ny < 0):
-                    if (nx, ny) not in self.moves and grid[nx][ny] == 'O':
-                        self.moves.append((nx, ny))
-                        self.generateMoves((nx, ny), grid, 'East')
+                    else:  # MISS
+                        gamelogic[i][j] = 'X'
+                        TOKENS.append(Tokens(
+                            BLUETOKEN, pGameGrid[i][j], 'Miss',
+                            None, None, None
+                        ))
 
-        return
+                    self.turn = False
+                    return False
+
+        return False
+
+    def get_neighbors(self, x, y):
+        for dx, dy in [(-1,0), (1,0), (0,-1), (0,1)]:
+            nx, ny = x + dx, y + dy
+            if 0 <= nx < 10 and 0 <= ny < 10:
+                yield nx, ny
 
 
 class Tokens:
@@ -807,29 +804,10 @@ def updateGameScreen(window, GAMESTATE):
     elif GAMESTATE == 'Deployment':
         deploymentScreen(window)
     elif GAMESTATE == 'Game Over':
-        #endScreen(window)
-        drawGameOverBox(GAMESCREEN, winner)
-        REPLAY_BUTTON.active = True
-        REPLAY_BUTTON.draw(GAMESCREEN)
+        endScreen(window)
 
     pygame.display.update()
 
-#Add win/lose box at the end 
-def drawGameOverBox(window, winner):
-    box_rect = BOX_RECT
-
-    # dotted border
-    for i in range(0, box_rect.width, 12):
-        pygame.draw.circle(window, (180, 0, 0), (box_rect.left + i, box_rect.top), 3)
-        pygame.draw.circle(window, (180, 0, 0), (box_rect.left + i, box_rect.bottom), 3)
-    for i in range(0, box_rect.height, 12):
-        pygame.draw.circle(window, (180, 0, 0), (box_rect.left, box_rect.top + i), 3)
-        pygame.draw.circle(window, (180, 0, 0), (box_rect.right, box_rect.top + i), 3)
-
-    # message
-    msg = "You Win!" if winner == 'PLAYER' else "You Lose!"
-    text = font.render(msg, True, (0, 0, 180))
-    window.blit(text, text.get_rect(center=(box_rect.centerx, box_rect.centery - 40)))
 
 #  Game Settings and Variables
 SCREENWIDTH = 1260
@@ -843,10 +821,7 @@ INDNUM = 0
 BLIPPOSITION = None
 TURNTIMER = pygame.time.get_ticks()
 GAMESTATE = 'Main Menu'
-font = pygame.font.Font('freesansbold.ttf', 24)
-winner = None   # 'PLAYER' or 'COMPUTER'
-gameOver = False
-BOX_RECT = pygame.Rect(650, 350, 450, 250)
+
 
 #  Colors
 
@@ -903,15 +878,6 @@ BUTTONS = [
     Button(BUTTONIMAGE1, (250, 100), (900, SCREENHEIGHT // 2 - 150), 'Easy Computer'),
     Button(BUTTONIMAGE1, (250, 100), (900, SCREENHEIGHT // 2 + 150), 'Hard Computer')
 ]
-
-# REPLAY_BUTTON
-REPLAY_BUTTON = Button(
-    BUTTONIMAGE1,
-    (250, 100),
-    (BOX_RECT.centerx - 125, BOX_RECT.centery + 20),
-    'Replay'
-)
-
 REDTOKEN = loadImage('assets/images/tokens/redtoken.png', (CELLSIZE, CELLSIZE))
 GREENTOKEN = loadImage('assets/images/tokens/greentoken.png', (CELLSIZE, CELLSIZE))
 BLUETOKEN = loadImage('assets/images/tokens/bluetoken.png', (CELLSIZE, CELLSIZE))
@@ -982,16 +948,16 @@ while RUNGAME:
                             elif button.name == 'Hard Computer':
                                 computer = HardComputer()
                             if GAMESTATE == 'Game Over':
-                                if REPLAY_BUTTON.rect.collidepoint(pygame.mouse.get_pos()):
-                                    gameOver = False
-                                    winner = None
-                                    TOKENS.clear()
-                                    pGameLogic = createGameLogic(ROWS, COLS)
-                                    cGameLogic = createGameLogic(ROWS, COLS)
-                                    updateGameLogic(pGameGrid, pFleet, pGameLogic)
-                                    updateGameLogic(cGameGrid, cFleet, cGameLogic)
-                                    GAMESTATE = 'Deployment'
-                                    DEPLOYMENT = True
+                                TOKENS.clear()
+                                for ship in pFleet:
+                                    ship.returnToDefaultPosition()
+                                randomizeShipPositions(cFleet, cGameGrid)
+                                pGameLogic = createGameLogic(ROWS, COLS)
+                                updateGameLogic(pGameGrid, pFleet, pGameLogic)
+                                cGameLogic = createGameLogic(ROWS, COLS)
+                                updateGameLogic(cGameGrid, cFleet, cGameLogic)
+                                status = deploymentPhase(DEPLOYMENT)
+                                DEPLOYMENT = status
                             GAMESTATE = STAGE[1]
                         button.actionOnPress()
 
@@ -1010,34 +976,14 @@ while RUNGAME:
     if SCANNER == True:
         INDNUM += 1
 
-    if GAMESTATE == 'Deployment' and DEPLOYMENT == False and not gameOver:
-        if checkForWinners(cGameLogic):
-            winner = 'PLAYER'
-            GAMESTATE = 'Game Over'
-            gameOver = True
-
-        elif checkForWinners(pGameLogic):
-            winner = 'COMPUTER'
-            GAMESTATE = 'Game Over'
-            gameOver = True
-
-    if not gameOver:
-        takeTurns(player1, computer)
-
-    # if GAMESTATE == 'Deployment' and DEPLOYMENT != True:
-    #     player1Wins = checkForWinners(cGameLogic)
-    #     computerWins = checkForWinners(pGameLogic)
-    #     if player1Wins == True:
-    #         # victory_text = font.render('You Won', True, 'white')
-    #         # GAMESCREEN.blit(victory_text, (30, 265))
-    #         print('Player Wins!')
-    #     if computerWins == True:
-    #         # lose_text = font.render('You Lost!', True, 'white')
-    #         # GAMESCREEN.blit(lose_text, (30, 265))
-    #         print('Computer Wins!')
+    if GAMESTATE == 'Deployment' and DEPLOYMENT != True:
+        player1Wins = checkForWinners(cGameLogic)
+        computerWins = checkForWinners(pGameLogic)
+        if player1Wins == True or computerWins == True:
+            GAMESTATE = STAGE[2]
 
 
 
-    #takeTurns(player1, computer)
+    takeTurns(player1, computer)
 
 pygame.quit()
