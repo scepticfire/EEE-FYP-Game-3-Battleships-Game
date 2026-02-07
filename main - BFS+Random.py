@@ -326,7 +326,7 @@ class BFSRandom():
     def __init__(self):
         super().__init__()
         self.visited = set()
-        self.pending = []     # DFS frontier
+        self.pending = []     # BFS frontier
         self.hunting = True
 
     def computerStatus(self, msg):
@@ -335,7 +335,7 @@ class BFSRandom():
         return message
 
     def makeAttack(self, gamelogic):
-        # ---------- DFS (KILL MODE) ----------
+        # ---------- BFSRandom (KILL MODE) ----------
         if self.pending:
             x, y = self.pending.pop()
 
@@ -346,7 +346,7 @@ class BFSRandom():
 
             if gamelogic[x][y] == 'O':
                 self._hit(x, y, gamelogic)
-                self._dfs_expand(x, y)
+                self._bfs_expand(x, y)
             else:
                 self._miss(x, y, gamelogic)
 
@@ -365,16 +365,16 @@ class BFSRandom():
 
         if gamelogic[x][y] == 'O':
             self._hit(x, y, gamelogic)
-            self._dfs_expand(x, y)
+            self._bfs_expand(x, y)
         else:
             self._miss(x, y, gamelogic)
 
         self.turn = False
         return False
 
-    # ---------------- DFS ----------------
+    # ---------------- BFS ----------------
 
-    def _dfs_expand(self, x, y):
+    def _bfs_expand(self, x, y):
         for nx, ny in self.get_neighbors(x, y):
             if (nx, ny) not in self.visited:
                 self.pending.append((nx, ny))
