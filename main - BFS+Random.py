@@ -311,67 +311,28 @@ class Player:
                             if logicgrid[i][j] == 'O':
                                 TOKENS.append(Tokens(REDTOKEN, grid[i][j], 'Hit', None, None, None))
                                 logicgrid[i][j] = 'T'
-                                SHOTSOUND.play()
-                                HITSOUND.play()
+                                # SHOTSOUND.play()
+                                # HITSOUND.play()
                                 self.turn = False
                         else:
                             logicgrid[i][j] = 'X'
-                            SHOTSOUND.play()
-                            MISSSOUND.play()
+                            # SHOTSOUND.play()
+                            # MISSSOUND.play()
                             TOKENS.append(Tokens(GREENTOKEN, grid[i][j], 'Miss', None, None, None))
                             self.turn = False
 
 
-class EasyComputer:
-    def __init__(self):
-        self.turn = False
-        self.status = self.computerStatus('Thinking')
-        self.name = 'Easy Computer'
-
-
-    def computerStatus(self, msg):
-        image = pygame.font.SysFont('Stencil', 22)
-        message = image.render(msg, 1, (0, 0, 0))
-        return message
-
-
-    def makeAttack(self, gamelogic):
-        COMPTURNTIMER = pygame.time.get_ticks()
-        if COMPTURNTIMER - TURNTIMER >= 3000:
-            validChoice = False
-            while not validChoice:
-                rowX = random.randint(0, 9)
-                colX = random.randint(0, 9)
-
-                if gamelogic[rowX][colX] == ' ' or gamelogic[rowX][colX] == 'O':
-                    validChoice = True
-
-            if gamelogic[rowX][colX] == 'O':
-                TOKENS.append(Tokens(REDTOKEN, pGameGrid[rowX][colX], 'Hit', FIRETOKENIMAGELIST, EXPLOSIONIMAGELIST, None))
-                gamelogic[rowX][colX] = 'T'
-                SHOTSOUND.play()
-                HITSOUND.play()
-                self.turn = False
-            else:
-                gamelogic[rowX][colX] = 'X'
-                TOKENS.append(Tokens(BLUETOKEN, pGameGrid[rowX][colX], 'Miss', None, None, None))
-                SHOTSOUND.play()
-                MISSSOUND.play()
-                self.turn = False
-        return self.turn
-
-
-    def draw(self, window):
-        if self.turn:
-            window.blit(self.status, (cGameGrid[0][0][0] - CELLSIZE, cGameGrid[-1][-1][1] + CELLSIZE))
-
-
-class HardComputer(EasyComputer):
+class BFSRandom():
     def __init__(self):
         super().__init__()
         self.visited = set()
         self.pending = []     # DFS frontier
         self.hunting = True
+
+    def computerStatus(self, msg):
+        image = pygame.font.SysFont('Stencil', 22)
+        message = image.render(msg, 1, (0, 0, 0))
+        return message
 
     def makeAttack(self, gamelogic):
         # ---------- DFS (KILL MODE) ----------
@@ -573,14 +534,14 @@ def showGridOnScreen(window, cellsize, playerGrid, computerGrid):
                 pygame.draw.rect(window, (255, 255, 255), (col[0], col[1], cellsize, cellsize), 1)
 
 
-def printGameLogic():
-    """prints to the terminal the game logic"""
-    print('Player Grid'.center(50, '#'))
-    for _ in pGameLogic:
-        print(_)
-    print('Computer Grid'.center(50, '#'))
-    for _ in cGameLogic:
-        print(_)
+# def printGameLogic():
+#     """prints to the terminal the game logic"""
+#     print('Player Grid'.center(50, '#'))
+#     for _ in pGameLogic:
+#         print(_)
+#     print('Computer Grid'.center(50, '#'))
+#     for _ in cGameLogic:
+#         print(_)
 
 
 def loadImage(path, size, rotate=False):
@@ -754,7 +715,7 @@ def mainMenuScreen(window):
     window.blit(MAINMENUIMAGE, (0, 0))
 
     for button in BUTTONS:
-        if button.name in ['Easy Computer', 'Hard Computer']:
+        if button.name in ['BFSRandom']:
             button.active = True
             button.draw(window)
         else:
@@ -768,9 +729,6 @@ def deploymentScreen(window):
     window.blit(PGAMEGRIDIMG, (0, 0))
     window.blit(CGAMEGRIDIMG, (cGameGrid[0][0][0] - 50, cGameGrid[0][0][1] - 50))
 
-    #  Draws the player and computer grids to the screen
-    # showGridOnScreen(window, CELLSIZE, pGameGrid, cGameGrid)
-
     #  Draw ships to screen
     for ship in pFleet:
         ship.draw(window)
@@ -780,7 +738,6 @@ def deploymentScreen(window):
     displayShipNames(window)
 
     for ship in cFleet:
-        # ship.draw(window)
         ship.snapToGridEdge(cGameGrid)
         ship.snapToGrid(cGameGrid)
 
@@ -791,7 +748,6 @@ def deploymentScreen(window):
         else:
             button.active = False
 
-    computer.draw(window)
 
     radarScan = displayRadarScanner(RADARGRIDIMAGES, INDNUM, SCANNER)
     if not radarScan:
@@ -818,7 +774,7 @@ def endScreen(window):
     window.blit(ENDSCREENIMAGE, (0, 0))
 
     for button in BUTTONS:
-        if button.name in ['Easy Computer', 'Hard Computer', 'Quit']:
+        if button.name in ['BFSRandom', 'Quit']:
             button.active = True
             button.draw(window)
         else:
@@ -907,7 +863,7 @@ FLEET = {
 }
 STAGE = ['Main Menu', 'Deployment', 'Game Over']
 
-#  Loading Game Variables
+# Loading Game Variables
 pGameGrid = createGameGrid(ROWS, COLS, CELLSIZE, (50, 50))
 pGameLogic = createGameLogic(ROWS, COLS)
 pFleet = createFleet()
@@ -917,10 +873,8 @@ cGameLogic = createGameLogic(ROWS, COLS)
 cFleet = createFleet()
 randomizeShipPositions(cFleet, cGameGrid)
 
-printGameLogic()
 
-
-#  Loading Game Sounds and Images
+# Loading Game Images
 MAINMENUIMAGE = loadImage('assets/images/background/Battleship.jpg', (LOGICAL_WIDTH // 3 * 2, LOGICAL_HEIGHT))
 ENDSCREENIMAGE = loadImage('assets/images/background/Carrier.jpg', (LOGICAL_WIDTH, LOGICAL_HEIGHT))
 BACKGROUND = loadImage('assets/images/background/gamebg.png', (LOGICAL_WIDTH, LOGICAL_HEIGHT))
@@ -932,8 +886,7 @@ BUTTONS = [
     Button(BUTTONIMAGE, (150, 50), (25, 900), 'Randomize'),
     Button(BUTTONIMAGE, (150, 50), (200, 900), 'Reset'),
     Button(BUTTONIMAGE, (150, 50), (375, 900), 'Deploy'),
-    Button(BUTTONIMAGE1, (250, 100), (900, LOGICAL_HEIGHT // 2 - 150), 'Easy Computer'),
-    Button(BUTTONIMAGE1, (250, 100), (900, LOGICAL_HEIGHT // 2 + 150), 'Hard Computer')
+    Button(BUTTONIMAGE1, (250, 100), (900, LOGICAL_HEIGHT // 2 + 150), 'BFSRandom')
 ]
 REDTOKEN = loadImage('assets/images/tokens/redtoken.png', (CELLSIZE, CELLSIZE))
 GREENTOKEN = loadImage('assets/images/tokens/greentoken.png', (CELLSIZE, CELLSIZE))
@@ -948,18 +901,20 @@ TOKENS = []
 RADARGRIDIMAGES = loadAnimationImages('assets/images/radar_base/radar_anim', 360, (ROWS * CELLSIZE, COLS * CELLSIZE))
 RADARBLIPIMAGES = loadAnimationImages('assets/images/radar_blip/Blip_', 11, (50, 50))
 RADARGRID = loadImage('assets/images/grids/grid_faint.png', ((ROWS) * CELLSIZE, (COLS) * CELLSIZE))
-HITSOUND = pygame.mixer.Sound('assets/sounds/explosion.wav')
-HITSOUND.set_volume(0.05)
-SHOTSOUND = pygame.mixer.Sound('assets/sounds/gunshot.wav')
-SHOTSOUND.set_volume(0.05)
-MISSSOUND = pygame.mixer.Sound('assets/sounds/splash.wav')
-MISSSOUND.set_volume(0.05)
+
+# Loading Game Sounds
+# HITSOUND = pygame.mixer.Sound('assets/sounds/explosion.wav')
+# HITSOUND.set_volume(0.05)
+# SHOTSOUND = pygame.mixer.Sound('assets/sounds/gunshot.wav')
+# SHOTSOUND.set_volume(0.05)
+# MISSSOUND = pygame.mixer.Sound('assets/sounds/splash.wav')
+# MISSSOUND.set_volume(0.05)
 
 
 
 #  Initialise Players
 player1 = Player()
-computer = EasyComputer()
+computer = BFSRandom()
 
 #  Main Game Loop
 RUNGAME = True
@@ -998,12 +953,10 @@ while RUNGAME:
                             SCANNER = True
                             INDNUM = 0
                             BLIPPOSITION = pick_random_ship_location(cGameLogic)
-                        elif (button.name == 'Easy Computer' or button.name == 'Hard Computer') and button.active == True:
-                            if button.name == 'Easy Computer':
-                                computer = EasyComputer()
+                        elif (button.name == 'BFSRandom') and button.active == True:
 
-                            elif button.name == 'Hard Computer':
-                                computer = HardComputer()
+                            if button.name == 'BFSRandom':
+                                computer = BFSRandom()
                             if GAMESTATE == 'Game Over':
                                 TOKENS.clear()
                                 for ship in pFleet:
@@ -1018,9 +971,6 @@ while RUNGAME:
                             GAMESTATE = STAGE[1]
                         button.actionOnPress()
 
-
-            elif event.button == 2:
-                printGameLogic()
 
 
             elif event.button == 3:
