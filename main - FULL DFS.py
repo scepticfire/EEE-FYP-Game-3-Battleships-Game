@@ -369,86 +369,83 @@ class EasyComputer:
 class HardComputer(EasyComputer):
     def __init__(self):
         super().__init__()
-        self.moves = []
-
+        self.stack = []          # DFS stack
+        self.visited = set()     # visited cells
+        self.hunting = True      # hunt vs dfs mode
 
     def makeAttack(self, gamelogic):
-        if len(self.moves) == 0:
-            COMPTURNTIMER = pygame.time.get_ticks()
-            if COMPTURNTIMER - TURNTIMER >= 3000:
-                validChoice = False
-                while not validChoice:
-                    rowX = random.randint(0, 9)
-                    rowY = random.randint(0, 9)
+        # --- DFS MODE ---
+        if self.stack:
+            x, y = self.stack.pop()
 
-                    if gamelogic[rowX][rowY] == ' ' or gamelogic[rowX][rowY] == 'O':
-                        validChoice = True
+            if (x, y) in self.visited:
+                return True
 
-                if gamelogic[rowX][rowY] == 'O':
-                    TOKENS.append(
-                        Tokens(REDTOKEN, pGameGrid[rowX][rowY], 'Hit', FIRETOKENIMAGELIST, EXPLOSIONIMAGELIST, None))
-                    gamelogic[rowX][rowY] = 'T'
-                    SHOTSOUND.play()
-                    HITSOUND.play()
-                    self.generateMoves((rowX, rowY), gamelogic)
-                    self.turn = False
-                else:
-                    gamelogic[rowX][rowY] = 'X'
-                    TOKENS.append(Tokens(BLUETOKEN, pGameGrid[rowX][rowY], 'Miss', None, None, None))
-                    SHOTSOUND.play()
-                    MISSSOUND.play()
-                    self.turn = False
+            self.visited.add((x, y))
 
-        elif len(self.moves) > 0:
-            COMPTURNTIMER = pygame.time.get_ticks()
-            if COMPTURNTIMER - TURNTIMER >= 2000:
-                rowX, rowY = self.moves[0]
-                TOKENS.append(Tokens(REDTOKEN, pGameGrid[rowX][rowY], 'Hit', FIRETOKENIMAGELIST, EXPLOSIONIMAGELIST, None))
-                gamelogic[rowX][rowY] = 'T'
-                SHOTSOUND.play()
-                HITSOUND.play()
-                self.moves.remove((rowX, rowY))
+            if gamelogic[x][y] == 'O':  # HIT
+                gamelogic[x][y] = 'T'
+                TOKENS.append(Tokens(
+                    REDTOKEN, pGameGrid[x][y], 'Hit',
+                    FIRETOKENIMAGELIST, EXPLOSIONIMAGELIST, None
+                ))
+
+                neighbors = list(self.get_neighbors(x, y))
+                random.shuffle(neighbors)
+                for n in neighbors:
+                    self.stack.append(n)
+
+                # Push neighbors (DFS)
+                for nx, ny in self.get_neighbors(x, y):
+                    if (nx, ny) not in self.visited:
+                        self.stack.append((nx, ny))
+
                 self.turn = False
-        return self.turn
+                return False
 
+            elif gamelogic[x][y] == ' ':
+                gamelogic[x][y] = 'X'
+                TOKENS.append(Tokens(
+                    BLUETOKEN, pGameGrid[x][y], 'Miss',
+                    None, None, None
+                ))
+                self.turn = False
+                return False
 
-    def generateMoves(self, coords, grid, lstDir=None):
-        x, y = coords
-        nx, ny = 0, 0
-        for direction in ['North', 'South', 'East', 'West']:
-            if direction == 'North' and lstDir != 'North':
-                nx = x - 1
-                ny = y
-                if not (nx > 9 or ny > 9 or nx < 0 or ny < 0):
-                    if (nx, ny) not in self.moves and grid[nx][ny] == 'O':
-                        self.moves.append((nx, ny))
-                        self.generateMoves((nx, ny), grid, 'South')
+        # --- HUNT MODE ---
+        for i in range(10):
+            for j in range(10):
+                if (i, j) not in self.visited and gamelogic[i][j] in (' ', 'O'):
+                    self.visited.add((i, j))
 
-            if direction == 'South' and lstDir != 'South':
-                nx = x + 1
-                ny = y
-                if not (nx > 9 or ny > 9 or nx < 0 or ny < 0):
-                    if (nx, ny) not in self.moves and grid[nx][ny] == 'O':
-                        self.moves.append((nx, ny))
-                        self.generateMoves((nx, ny), grid, 'North')
+                    if gamelogic[i][j] == 'O':  # HIT
+                        gamelogic[i][j] = 'T'
+                        TOKENS.append(Tokens(
+                            REDTOKEN, pGameGrid[i][j], 'Hit',
+                            FIRETOKENIMAGELIST, EXPLOSIONIMAGELIST, None
+                        ))
 
-            if direction == 'East' and lstDir != 'East':
-                nx = x
-                ny = y + 1
-                if not (nx > 9 or ny > 9 or nx < 0 or ny < 0):
-                    if (nx, ny) not in self.moves and grid[nx][ny] == 'O':
-                        self.moves.append((nx, ny))
-                        self.generateMoves((nx, ny), grid, 'West')
+                        # Seed DFS from hit
+                        for nx, ny in self.get_neighbors(i, j):
+                            self.stack.append((nx, ny))
 
-            if direction == 'West' and lstDir != 'West':
-                nx = x
-                ny = y - 1
-                if not (nx > 9 or ny > 9 or nx < 0 or ny < 0):
-                    if (nx, ny) not in self.moves and grid[nx][ny] == 'O':
-                        self.moves.append((nx, ny))
-                        self.generateMoves((nx, ny), grid, 'East')
+                    else:  # MISS
+                        gamelogic[i][j] = 'X'
+                        TOKENS.append(Tokens(
+                            BLUETOKEN, pGameGrid[i][j], 'Miss',
+                            None, None, None
+                        ))
 
-        return
+                    self.turn = False
+                    return False
+
+        return False
+
+    def get_neighbors(self, x, y):
+        for dx, dy in [(-1,0), (1,0), (0,-1), (0,1)]:
+            nx, ny = x + dx, y + dy
+            if 0 <= nx < 10 and 0 <= ny < 10:
+                yield nx, ny
 
 
 class Tokens:

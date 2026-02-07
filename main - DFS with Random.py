@@ -369,86 +369,110 @@ class EasyComputer:
 class HardComputer(EasyComputer):
     def __init__(self):
         super().__init__()
-        self.moves = []
-
+        self.visited = set()
+        self.pending = []     # DFS frontier
+        self.hunting = True
 
     def makeAttack(self, gamelogic):
-        if len(self.moves) == 0:
-            COMPTURNTIMER = pygame.time.get_ticks()
-            if COMPTURNTIMER - TURNTIMER >= 3000:
-                validChoice = False
-                while not validChoice:
-                    rowX = random.randint(0, 9)
-                    rowY = random.randint(0, 9)
+        # ---------- DFS (KILL MODE) ----------
+        if self.pending:
+            x, y = self.pending.pop()
 
-                    if gamelogic[rowX][rowY] == ' ' or gamelogic[rowX][rowY] == 'O':
-                        validChoice = True
+            if (x, y) in self.visited:
+                return True
 
-                if gamelogic[rowX][rowY] == 'O':
-                    TOKENS.append(
-                        Tokens(REDTOKEN, pGameGrid[rowX][rowY], 'Hit', FIRETOKENIMAGELIST, EXPLOSIONIMAGELIST, None))
-                    gamelogic[rowX][rowY] = 'T'
-                    SHOTSOUND.play()
-                    HITSOUND.play()
-                    self.generateMoves((rowX, rowY), gamelogic)
-                    self.turn = False
-                else:
-                    gamelogic[rowX][rowY] = 'X'
-                    TOKENS.append(Tokens(BLUETOKEN, pGameGrid[rowX][rowY], 'Miss', None, None, None))
-                    SHOTSOUND.play()
-                    MISSSOUND.play()
-                    self.turn = False
+            self.visited.add((x, y))
 
-        elif len(self.moves) > 0:
-            COMPTURNTIMER = pygame.time.get_ticks()
-            if COMPTURNTIMER - TURNTIMER >= 2000:
-                rowX, rowY = self.moves[0]
-                TOKENS.append(Tokens(REDTOKEN, pGameGrid[rowX][rowY], 'Hit', FIRETOKENIMAGELIST, EXPLOSIONIMAGELIST, None))
-                gamelogic[rowX][rowY] = 'T'
-                SHOTSOUND.play()
-                HITSOUND.play()
-                self.moves.remove((rowX, rowY))
-                self.turn = False
-        return self.turn
+            if gamelogic[x][y] == 'O':
+                self._hit(x, y, gamelogic)
+                self._dfs_expand(x, y)
+            else:
+                self._miss(x, y, gamelogic)
 
+            self.turn = False
+            return False
 
-    def generateMoves(self, coords, grid, lstDir=None):
-        x, y = coords
-        nx, ny = 0, 0
-        for direction in ['North', 'South', 'East', 'West']:
-            if direction == 'North' and lstDir != 'North':
-                nx = x - 1
-                ny = y
-                if not (nx > 9 or ny > 9 or nx < 0 or ny < 0):
-                    if (nx, ny) not in self.moves and grid[nx][ny] == 'O':
-                        self.moves.append((nx, ny))
-                        self.generateMoves((nx, ny), grid, 'South')
+        # ---------- PROBABILITY HUNT ----------
+        candidates = self._probability_hunt(gamelogic)
 
-            if direction == 'South' and lstDir != 'South':
-                nx = x + 1
-                ny = y
-                if not (nx > 9 or ny > 9 or nx < 0 or ny < 0):
-                    if (nx, ny) not in self.moves and grid[nx][ny] == 'O':
-                        self.moves.append((nx, ny))
-                        self.generateMoves((nx, ny), grid, 'North')
+        if not candidates:
+            return False
 
-            if direction == 'East' and lstDir != 'East':
-                nx = x
-                ny = y + 1
-                if not (nx > 9 or ny > 9 or nx < 0 or ny < 0):
-                    if (nx, ny) not in self.moves and grid[nx][ny] == 'O':
-                        self.moves.append((nx, ny))
-                        self.generateMoves((nx, ny), grid, 'West')
+        x, y = candidates[0]   # highest probability
 
-            if direction == 'West' and lstDir != 'West':
-                nx = x
-                ny = y - 1
-                if not (nx > 9 or ny > 9 or nx < 0 or ny < 0):
-                    if (nx, ny) not in self.moves and grid[nx][ny] == 'O':
-                        self.moves.append((nx, ny))
-                        self.generateMoves((nx, ny), grid, 'East')
+        self.visited.add((x, y))
 
-        return
+        if gamelogic[x][y] == 'O':
+            self._hit(x, y, gamelogic)
+            self._dfs_expand(x, y)
+        else:
+            self._miss(x, y, gamelogic)
+
+        self.turn = False
+        return False
+
+    # ---------------- DFS ----------------
+
+    def _dfs_expand(self, x, y):
+        for nx, ny in self.get_neighbors(x, y):
+            if (nx, ny) not in self.visited:
+                self.pending.append((nx, ny))
+
+    # ---------------- Probability ----------------
+
+    def _probability_hunt(self, grid):
+        scores = []
+
+        for i in range(10):
+            for j in range(10):
+                if (i, j) in self.visited:
+                    continue
+                if grid[i][j] not in (' ', 'O'):
+                    continue
+
+                # Parity optimization
+                if (i + j) % 2 != 0:
+                    continue
+
+                score = self._score_cell(i, j, grid)
+                scores.append(((i, j), score))
+
+        scores.sort(key=lambda x: x[1], reverse=True)
+        return [pos for pos, _ in scores]
+
+    def _score_cell(self, x, y, grid):
+        """Count possible ship placements passing through this cell"""
+        score = 0
+
+        for dx, dy in [(-1,0),(1,0),(0,-1),(0,1)]:
+            nx, ny = x + dx, y + dy
+            if 0 <= nx < 10 and 0 <= ny < 10:
+                if grid[nx][ny] in (' ', 'O'):
+                    score += 1
+
+        return score
+
+    # ---------------- Helpers ----------------
+
+    def _hit(self, x, y, gamelogic):
+        gamelogic[x][y] = 'T'
+        TOKENS.append(Tokens(
+            REDTOKEN, pGameGrid[x][y], 'Hit',
+            FIRETOKENIMAGELIST, EXPLOSIONIMAGELIST, None
+        ))
+
+    def _miss(self, x, y, gamelogic):
+        gamelogic[x][y] = 'X'
+        TOKENS.append(Tokens(
+            BLUETOKEN, pGameGrid[x][y], 'Miss',
+            None, None, None
+        ))
+
+    def get_neighbors(self, x, y):
+        for dx, dy in [(-1,0),(1,0),(0,-1),(0,1)]:
+            nx, ny = x + dx, y + dy
+            if 0 <= nx < 10 and 0 <= ny < 10:
+                yield nx, ny
 
 
 class Tokens:
