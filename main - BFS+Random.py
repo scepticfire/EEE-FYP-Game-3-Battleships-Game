@@ -294,6 +294,9 @@ class Button:
         self.focusOnButton(window)
         window.blit(self.msg, self.msgRect)
 
+    def drawOutline(self, window, color=(255, 0, 0), thickness=3):
+        pygame.draw.rect(window, color, self.rect, thickness)
+
 
 class Player:
     def __init__(self):
@@ -534,16 +537,6 @@ def showGridOnScreen(window, cellsize, playerGrid, computerGrid):
                 pygame.draw.rect(window, (255, 255, 255), (col[0], col[1], cellsize, cellsize), 1)
 
 
-# def printGameLogic():
-#     """prints to the terminal the game logic"""
-#     print('Player Grid'.center(50, '#'))
-#     for _ in pGameLogic:
-#         print(_)
-#     print('Computer Grid'.center(50, '#'))
-#     for _ in cGameLogic:
-#         print(_)
-
-
 def loadImage(path, size, rotate=False):
     """A function to import the images into memory"""
     img = pygame.image.load(path).convert_alpha()
@@ -715,11 +708,9 @@ def mainMenuScreen(window):
     window.blit(MAINMENUIMAGE, (0, 0))
 
     for button in BUTTONS:
-        if button.name in ['BFSRandom']:
-            button.active = True
-            button.draw(window)
-        else:
-            button.active = False
+        button.active = (button.name == "Start")
+        button.draw(window)
+
 
 
 def deploymentScreen(window):
@@ -774,7 +765,7 @@ def endScreen(window):
     window.blit(ENDSCREENIMAGE, (0, 0))
 
     for button in BUTTONS:
-        if button.name in ['BFSRandom', 'Quit']:
+        if button.name in ['Start', 'Quit']:
             button.active = True
             button.draw(window)
         else:
@@ -790,6 +781,8 @@ def updateGameScreen(window, GAMESTATE):
         deploymentScreen(window)
     elif GAMESTATE == 'Game Over':
         endScreen(window)
+    elif GAMESTATE == 'AI Config':
+        aiConfigScreen(window)
 
     # Scale logical screen to window
     scaled = pygame.transform.smoothscale(
@@ -809,6 +802,45 @@ def get_logical_mouse_pos():
 
     return int(mx * scale_x), int(my * scale_y)
 
+def aiConfigScreen(window):
+    window.fill((0, 150, 170))  # teal background
+
+    title = pygame.font.SysFont('Stencil', 36).render(
+        'Choose AI Algorithm:', True, (0, 0, 0)
+    )
+    window.blit(title, (450, 80))
+
+    for btn in AI_BUTTONS:
+        btn.active = True
+        btn.draw(window)
+        if SELECTED_AI == btn.name:
+            btn.drawOutline(window)
+
+    subtitle = pygame.font.SysFont('Stencil', 36).render(
+        'Choose Starting Position:', True, (0, 0, 0)
+    )
+    window.blit(subtitle, (420, 240))
+
+    for btn in POS_BUTTONS:
+        btn.active = True
+        btn.draw(window)
+        if SELECTED_START_POS == btn.name:
+            btn.drawOutline(window)
+
+    # Start button only active if both selected
+    START_BUTTON.active = (SELECTED_AI is not None and SELECTED_START_POS is not None)
+    START_BUTTON.draw(window)
+
+    if START_BUTTON.active:
+        START_BUTTON.drawOutline(window, (0, 0, 0))
+
+    # Bottom image
+    bottom_img = loadImage(
+        'assets/images/background/Battleship bottom image.webp',
+        (LOGICAL_WIDTH, 300)
+    )
+    window.blit(bottom_img, (0, LOGICAL_HEIGHT - 300))
+
 
 #  Game Settings and Variables
 LOGICAL_WIDTH = 1260
@@ -822,6 +854,10 @@ INDNUM = 0
 BLIPPOSITION = None
 TURNTIMER = pygame.time.get_ticks()
 GAMESTATE = 'Main Menu'
+
+#for initial testing
+SELECTED_AI = None          # 'BFS', 'DFS', 'LINEAR', 'BINARY'
+SELECTED_START_POS = None  # '(0,0)', 'RANDOM', 'MIDDLE'
 
 
 # Variable size for laptop and desktop
@@ -886,8 +922,27 @@ BUTTONS = [
     Button(BUTTONIMAGE, (150, 50), (25, 900), 'Randomize'),
     Button(BUTTONIMAGE, (150, 50), (200, 900), 'Reset'),
     Button(BUTTONIMAGE, (150, 50), (375, 900), 'Deploy'),
-    Button(BUTTONIMAGE1, (250, 100), (900, LOGICAL_HEIGHT // 2 + 150), 'BFSRandom')
+    Button(BUTTONIMAGE1, (250, 100), (900, LOGICAL_HEIGHT // 2 + 150), 'Start')
 ]
+
+# --- AI Algorithm Buttons ---
+AI_BUTTONS = [
+    Button(BUTTONIMAGE, (150, 50), (200, 150), 'BFS'),
+    Button(BUTTONIMAGE, (150, 50), (380, 150), 'DFS'),
+    Button(BUTTONIMAGE, (150, 50), (560, 150), 'Linear Search'),
+    Button(BUTTONIMAGE, (150, 50), (760, 150), 'Binary Search')
+]
+
+# --- Starting Position Buttons ---
+POS_BUTTONS = [
+    Button(BUTTONIMAGE, (150, 50), (260, 300), '(0,0)'),
+    Button(BUTTONIMAGE, (150, 50), (440, 300), 'Random'),
+    Button(BUTTONIMAGE, (150, 50), (620, 300), 'Middle')
+]
+
+START_BUTTON = Button(BUTTONIMAGE1, (250, 100), (505, 450), 'Start')
+
+
 REDTOKEN = loadImage('assets/images/tokens/redtoken.png', (CELLSIZE, CELLSIZE))
 GREENTOKEN = loadImage('assets/images/tokens/greentoken.png', (CELLSIZE, CELLSIZE))
 BLUETOKEN = loadImage('assets/images/tokens/bluetoken.png', (CELLSIZE, CELLSIZE))
@@ -926,6 +981,36 @@ while RUNGAME:
             RUNGAME = False
         elif event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 1:
+                # ================= AI CONFIG SCREEN =================
+                if GAMESTATE == 'AI Config':
+
+                    # Select AI algorithm
+                    for btn in AI_BUTTONS:
+                        if btn.rect.collidepoint(get_logical_mouse_pos()):
+                            SELECTED_AI = btn.name
+
+                    # Select starting position
+                    for btn in POS_BUTTONS:
+                        if btn.rect.collidepoint(get_logical_mouse_pos()):
+                            SELECTED_START_POS = btn.name
+
+                    # Start game (only if both selected)
+                    if START_BUTTON.active and START_BUTTON.rect.collidepoint(get_logical_mouse_pos()):
+
+                        # --- INITIAL TEST CASE ---
+                        if SELECTED_AI == 'BFS' and SELECTED_START_POS == 'Random':
+                            computer = BFSRandom()
+
+                        # Reset game state
+                        TOKENS.clear()
+                        pGameLogic = createGameLogic(ROWS, COLS)
+                        cGameLogic = createGameLogic(ROWS, COLS)
+                        updateGameLogic(pGameGrid, pFleet, pGameLogic)
+                        updateGameLogic(cGameGrid, cFleet, cGameLogic)
+
+                        DEPLOYMENT = True
+                        GAMESTATE = 'Deployment'
+
                 if DEPLOYMENT == True:
                     for ship in pFleet:
                         if ship.rect.collidepoint(get_logical_mouse_pos()):
@@ -953,10 +1038,8 @@ while RUNGAME:
                             SCANNER = True
                             INDNUM = 0
                             BLIPPOSITION = pick_random_ship_location(cGameLogic)
-                        elif (button.name == 'BFSRandom') and button.active == True:
-
-                            if button.name == 'BFSRandom':
-                                computer = BFSRandom()
+                        elif button.name == 'Start' and button.active:
+                            GAMESTATE = 'AI Config'
                             if GAMESTATE == 'Game Over':
                                 TOKENS.clear()
                                 for ship in pFleet:
@@ -968,7 +1051,7 @@ while RUNGAME:
                                 updateGameLogic(cGameGrid, cFleet, cGameLogic)
                                 status = deploymentPhase(DEPLOYMENT)
                                 DEPLOYMENT = status
-                            GAMESTATE = STAGE[1]
+                            #GAMESTATE = STAGE[1]
                         button.actionOnPress()
 
 
