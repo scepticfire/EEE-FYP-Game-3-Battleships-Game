@@ -369,12 +369,12 @@ class EasyComputer:
 class HardComputer(EasyComputer):
     def __init__(self):
         super().__init__()
-        self.stack = []          # DFS stack
+        self.stack = []          # LINEAR SEARCH
         self.visited = set()     # visited cells
-        self.hunting = True      # hunt vs dfs mode
+        self.hunting = True      # hunt vs linear search mode
 
     def makeAttack(self, gamelogic):
-        # --- DFS MODE ---
+        # --- LINEAR SEARCH MODE ---
         if self.stack:
             x, y = self.stack.pop()
 
@@ -395,7 +395,7 @@ class HardComputer(EasyComputer):
                 for n in neighbors:
                     self.stack.append(n)
 
-                # Push neighbors (DFS)
+                # Push neighbors (LINEAR SEARCH)
                 for nx, ny in self.get_neighbors(x, y):
                     if (nx, ny) not in self.visited:
                         self.stack.append((nx, ny))
@@ -425,7 +425,7 @@ class HardComputer(EasyComputer):
                             FIRETOKENIMAGELIST, EXPLOSIONIMAGELIST, None
                         ))
 
-                        # Seed DFS from hit
+                        # Seed LINEAR SEARCH from hit
                         for nx, ny in self.get_neighbors(i, j):
                             self.stack.append((nx, ny))
 

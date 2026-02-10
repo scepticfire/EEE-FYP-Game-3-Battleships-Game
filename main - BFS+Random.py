@@ -324,7 +324,7 @@ class Player:
                             TOKENS.append(Tokens(GREENTOKEN, grid[i][j], 'Miss', None, None, None))
                             self.turn = False
 
-
+# BFS Combinations
 class BFSRandom():
     def __init__(self):
         super().__init__()
@@ -437,6 +437,192 @@ class BFSRandom():
             nx, ny = x + dx, y + dy
             if 0 <= nx < 10 and 0 <= ny < 10:
                 yield nx, ny
+
+
+class BFSLinearSearch():
+    def __init__(self):
+        super().__init__()
+        self.stack = []          # LINEAR SEARCH
+        self.visited = set()     # visited cells
+        self.hunting = True      # hunt vs linear search mode
+
+    def makeAttack(self, gamelogic):
+        # --- LINEAR SEARCH MODE ---
+        if self.stack:
+            x, y = self.stack.pop()
+
+            if (x, y) in self.visited:
+                return True
+
+            self.visited.add((x, y))
+
+            if gamelogic[x][y] == 'O':  # HIT
+                gamelogic[x][y] = 'T'
+                TOKENS.append(Tokens(
+                    REDTOKEN, pGameGrid[x][y], 'Hit',
+                    FIRETOKENIMAGELIST, EXPLOSIONIMAGELIST, None
+                ))
+
+                neighbors = list(self.get_neighbors(x, y))
+                random.shuffle(neighbors)
+                for n in neighbors:
+                    self.stack.append(n)
+
+                # Push neighbors (LINEAR SEARCH)
+                for nx, ny in self.get_neighbors(x, y):
+                    if (nx, ny) not in self.visited:
+                        self.stack.append((nx, ny))
+
+                self.turn = False
+                return False
+
+            elif gamelogic[x][y] == ' ':
+                gamelogic[x][y] = 'X'
+                TOKENS.append(Tokens(
+                    BLUETOKEN, pGameGrid[x][y], 'Miss',
+                    None, None, None
+                ))
+                self.turn = False
+                return False
+
+        # --- HUNT MODE ---
+        for i in range(10):
+            for j in range(10):
+                if (i, j) not in self.visited and gamelogic[i][j] in (' ', 'O'):
+                    self.visited.add((i, j))
+
+                    if gamelogic[i][j] == 'O':  # HIT
+                        gamelogic[i][j] = 'T'
+                        TOKENS.append(Tokens(
+                            REDTOKEN, pGameGrid[i][j], 'Hit',
+                            FIRETOKENIMAGELIST, EXPLOSIONIMAGELIST, None
+                        ))
+
+                        # Seed LINEAR SEARCH from hit
+                        for nx, ny in self.get_neighbors(i, j):
+                            self.stack.append((nx, ny))
+
+                    else:  # MISS
+                        gamelogic[i][j] = 'X'
+                        TOKENS.append(Tokens(
+                            BLUETOKEN, pGameGrid[i][j], 'Miss',
+                            None, None, None
+                        ))
+
+                    self.turn = False
+                    return False
+
+        return False
+
+    def get_neighbors(self, x, y):
+        for dx, dy in [(-1,0), (1,0), (0,-1), (0,1)]:
+            nx, ny = x + dx, y + dy
+            if 0 <= nx < 10 and 0 <= ny < 10:
+                yield nx, ny
+
+class BFSBinarySearch():
+    def __init__(self):
+        super().__init__()
+
+        # --- BFS (kill mode) ---
+        self.queue = []
+        self.visited = set()
+        self.hunting = True
+
+        # --- Binary-search-style sweep ---
+        self.start_col = random.choice([4, 5])   # E or F
+        self.direction = random.choice([-1, 1])  # left or right
+
+        self.row = 0
+        self.col = self.start_col
+        self.phase = 'primary'   # primary side → secondary side
+
+    def makeAttack(self, gamelogic):
+
+        # ========== BFS KILL MODE ==========
+        if self.queue:
+            x, y = self.queue.pop(0)
+
+            if (x, y) in self.visited:
+                return True
+
+            self.visited.add((x, y))
+
+            if gamelogic[x][y] == 'O':
+                self._hit(x, y, gamelogic)
+                self._bfs_expand(x, y)
+            else:
+                self._miss(x, y, gamelogic)
+
+            self.turn = False
+            return False
+
+        # ========== BINARY SWEEP MODE ==========
+        while self.row < 10:
+
+            if 0 <= self.col < 10:
+                x, y = self.row, self.col
+                self.col += self.direction
+            else:
+                # End reached → switch side
+                if self.phase == 'primary':
+                    self.phase = 'secondary'
+                    self.col = 5 if self.start_col == 4 else 4
+                    self.direction *= -1
+                else:
+                    # Finished both sides → next row
+                    self.phase = 'primary'
+                    self.col = self.start_col
+                    self.direction *= -1
+                    self.row += 1
+                continue
+
+            if (x, y) in self.visited:
+                continue
+
+            self.visited.add((x, y))
+
+            if gamelogic[x][y] == 'O':
+                self._hit(x, y, gamelogic)
+                self._bfs_expand(x, y)
+            else:
+                self._miss(x, y, gamelogic)
+
+            self.turn = False
+            return False
+
+        return False
+
+    # ---------------- BFS helpers ----------------
+
+    def _bfs_expand(self, x, y):
+        for nx, ny in self.get_neighbors(x, y):
+            if (nx, ny) not in self.visited:
+                self.queue.append((nx, ny))
+
+    def get_neighbors(self, x, y):
+        for dx, dy in [(-1,0),(1,0),(0,-1),(0,1)]:
+            nx, ny = x + dx, y + dy
+            if 0 <= nx < 10 and 0 <= ny < 10:
+                yield nx, ny
+
+    # ---------------- Token helpers ----------------
+
+    def _hit(self, x, y, gamelogic):
+        gamelogic[x][y] = 'T'
+        TOKENS.append(Tokens(
+            REDTOKEN, pGameGrid[x][y], 'Hit',
+            FIRETOKENIMAGELIST, EXPLOSIONIMAGELIST, None
+        ))
+
+    def _miss(self, x, y, gamelogic):
+        gamelogic[x][y] = 'X'
+        TOKENS.append(Tokens(
+            BLUETOKEN, pGameGrid[x][y], 'Miss',
+            None, None, None
+        ))
+
+# DFS Cominiations
 
 
 class Tokens:
@@ -821,14 +1007,14 @@ def aiConfigScreen(window):
     )
     window.blit(subtitle, (420, 240))
 
-    for btn in POS_BUTTONS:
+    for btn in BEHAVIOUR_BUTTONS:
         btn.active = True
         btn.draw(window)
-        if SELECTED_START_POS == btn.name:
+        if SELECTED_BEHAVIOUR == btn.name:
             btn.drawOutline(window)
 
     # Start button only active if both selected
-    START_BUTTON.active = (SELECTED_AI is not None and SELECTED_START_POS is not None)
+    START_BUTTON.active = (SELECTED_AI is not None and SELECTED_BEHAVIOUR is not None)
     START_BUTTON.draw(window)
 
     if START_BUTTON.active:
@@ -857,7 +1043,7 @@ GAMESTATE = 'Main Menu'
 
 #for initial testing
 SELECTED_AI = None          # 'BFS', 'DFS', 'LINEAR', 'BINARY'
-SELECTED_START_POS = None  # '(0,0)', 'RANDOM', 'MIDDLE'
+SELECTED_BEHAVIOUR = None  # '(0,0)', 'RANDOM', 'MIDDLE'
 
 
 # Variable size for laptop and desktop
@@ -929,15 +1115,13 @@ BUTTONS = [
 AI_BUTTONS = [
     Button(BUTTONIMAGE, (150, 50), (200, 150), 'BFS'),
     Button(BUTTONIMAGE, (150, 50), (380, 150), 'DFS'),
-    Button(BUTTONIMAGE, (150, 50), (560, 150), 'Linear Search'),
-    Button(BUTTONIMAGE, (150, 50), (760, 150), 'Binary Search')
 ]
 
-# --- Starting Position Buttons ---
-POS_BUTTONS = [
-    Button(BUTTONIMAGE, (150, 50), (260, 300), '(0,0)'),
-    Button(BUTTONIMAGE, (150, 50), (440, 300), 'Random'),
-    Button(BUTTONIMAGE, (150, 50), (620, 300), 'Middle')
+# --- AI Behaviour Buttons ---
+BEHAVIOUR_BUTTONS = [
+    Button(BUTTONIMAGE, (150, 50), (260, 300), 'Random'),
+    Button(BUTTONIMAGE, (150, 50), (440, 300), 'Linear Search'),
+    Button(BUTTONIMAGE, (150, 50), (620, 300), 'Binary Search')
 ]
 
 START_BUTTON = Button(BUTTONIMAGE1, (250, 100), (505, 450), 'Start')
@@ -989,17 +1173,21 @@ while RUNGAME:
                         if btn.rect.collidepoint(get_logical_mouse_pos()):
                             SELECTED_AI = btn.name
 
-                    # Select starting position
-                    for btn in POS_BUTTONS:
+                    # Select AI Behaviour 
+                    for btn in BEHAVIOUR_BUTTONS:
                         if btn.rect.collidepoint(get_logical_mouse_pos()):
-                            SELECTED_START_POS = btn.name
+                            SELECTED_BEHAVIOUR = btn.name
 
                     # Start game (only if both selected)
                     if START_BUTTON.active and START_BUTTON.rect.collidepoint(get_logical_mouse_pos()):
 
-                        # --- INITIAL TEST CASE ---
-                        if SELECTED_AI == 'BFS' and SELECTED_START_POS == 'Random':
+                        # BFS + Random Selected
+                        if SELECTED_AI == 'BFS' and SELECTED_BEHAVIOUR == 'Random':
                             computer = BFSRandom()
+                        if SELECTED_AI == 'BFS' and SELECTED_BEHAVIOUR == 'Linear Search':
+                            computer = BFSLinearSearch()
+                        if SELECTED_AI == 'BFS' and SELECTED_BEHAVIOUR == 'Binary Search':
+                            computer = BFSBinarySearch()
 
                         # Reset game state
                         TOKENS.clear()
