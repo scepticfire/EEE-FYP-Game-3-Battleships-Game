@@ -622,8 +622,252 @@ class BFSBinarySearch():
             None, None, None
         ))
 
-# DFS Cominiations
+# DFS Combiniations
+class DFSRandom():
+    def __init__(self):
+        self.stack = []
+        self.visited = set()
+        self.turn = False
 
+    def makeAttack(self, gamelogic):
+
+        # ===== DFS KILL MODE =====
+        if self.stack:
+            x, y = self.stack.pop()
+
+            if (x, y) in self.visited:
+                return True
+
+            self.visited.add((x, y))
+
+            if gamelogic[x][y] == 'O':
+                self._hit(x, y, gamelogic)
+                self._dfs_expand(x, y)
+            else:
+                self._miss(x, y, gamelogic)
+
+            self.turn = False
+            return False
+
+        # ===== RANDOM HUNT MODE =====
+        while True:
+            x = random.randint(0, 9)
+            y = random.randint(0, 9)
+
+            if (x, y) not in self.visited:
+                break
+
+        self.visited.add((x, y))
+
+        if gamelogic[x][y] == 'O':
+            self._hit(x, y, gamelogic)
+            self._dfs_expand(x, y)
+        else:
+            self._miss(x, y, gamelogic)
+
+        self.turn = False
+        return False
+
+    # -------- DFS helpers --------
+    def _dfs_expand(self, x, y):
+        for nx, ny in self.get_neighbors(x, y):
+            if (nx, ny) not in self.visited:
+                self.stack.append((nx, ny))
+
+    def get_neighbors(self, x, y):
+        for dx, dy in [(-1,0),(1,0),(0,-1),(0,1)]:
+            nx, ny = x + dx, y + dy
+            if 0 <= nx < 10 and 0 <= ny < 10:
+                yield nx, ny
+
+    # -------- Token helpers --------
+    def _hit(self, x, y, gamelogic):
+        gamelogic[x][y] = 'T'
+        TOKENS.append(Tokens(
+            REDTOKEN, pGameGrid[x][y], 'Hit',
+            FIRETOKENIMAGELIST, EXPLOSIONIMAGELIST, None
+        ))
+
+    def _miss(self, x, y, gamelogic):
+        gamelogic[x][y] = 'X'
+        TOKENS.append(Tokens(
+            BLUETOKEN, pGameGrid[x][y], 'Miss',
+            None, None, None
+        ))
+
+class DFSLinearSearch():
+    def __init__(self):
+        super().__init__()
+        self.stack = []          # DFS stack
+        self.visited = set()
+        self.hunting = True
+
+    def makeAttack(self, gamelogic):
+
+        # ===== DFS LINEAR MODE =====
+        if self.stack:
+            x, y, dx, dy = self.stack.pop()
+
+            if (x, y) in self.visited:
+                return True
+
+            self.visited.add((x, y))
+
+            if gamelogic[x][y] == 'O':  # HIT
+                gamelogic[x][y] = 'T'
+                TOKENS.append(Tokens(
+                    REDTOKEN, pGameGrid[x][y], 'Hit',
+                    FIRETOKENIMAGELIST, EXPLOSIONIMAGELIST, None
+                ))
+
+                # Continue deeper in SAME direction
+                nx, ny = x + dx, y + dy
+                if 0 <= nx < 10 and 0 <= ny < 10:
+                    self.stack.append((nx, ny, dx, dy))
+
+                self.turn = False
+                return False
+
+            elif gamelogic[x][y] == ' ':
+                gamelogic[x][y] = 'X'
+                TOKENS.append(Tokens(
+                    BLUETOKEN, pGameGrid[x][y], 'Miss',
+                    None, None, None
+                ))
+                self.turn = False
+                return False
+
+        # ===== LINEAR HUNT MODE =====
+        for i in range(10):
+            for j in range(10):
+                if (i, j) not in self.visited and gamelogic[i][j] in (' ', 'O'):
+                    self.visited.add((i, j))
+
+                    if gamelogic[i][j] == 'O':  # HIT
+                        gamelogic[i][j] = 'T'
+                        TOKENS.append(Tokens(
+                            REDTOKEN, pGameGrid[i][j], 'Hit',
+                            FIRETOKENIMAGELIST, EXPLOSIONIMAGELIST, None
+                        ))
+
+                        # Seed DFS with ALL directions
+                        for dx, dy in [(-1,0),(1,0),(0,-1),(0,1)]:
+                            nx, ny = i + dx, j + dy
+                            if 0 <= nx < 10 and 0 <= ny < 10:
+                                self.stack.append((nx, ny, dx, dy))
+
+                    else:  # MISS
+                        gamelogic[i][j] = 'X'
+                        TOKENS.append(Tokens(
+                            BLUETOKEN, pGameGrid[i][j], 'Miss',
+                            None, None, None
+                        ))
+
+                    self.turn = False
+                    return False
+
+        return False
+    
+class DFSBinarySearch():
+    def __init__(self):
+        super().__init__()
+
+        # ===== DFS (kill mode) =====
+        self.stack = []          # LIFO stack
+        self.visited = set()
+
+        # ===== Binary-style hunt =====
+        self.start_col = random.choice([4, 5])     # E or F
+        self.direction = random.choice([-1, 1])    # left or right
+
+        self.row = 0
+        self.col = self.start_col
+        self.phase = 'primary'    # primary → secondary
+
+        self.turn = False
+
+    def makeAttack(self, gamelogic):
+
+        # ================= DFS KILL MODE =================
+        if self.stack:
+            x, y, dx, dy = self.stack.pop()
+
+            if (x, y) in self.visited:
+                return True
+
+            self.visited.add((x, y))
+
+            if gamelogic[x][y] == 'O':   # HIT
+                self._hit(x, y, gamelogic)
+
+                # Continue deeper in SAME direction
+                nx, ny = x + dx, y + dy
+                if 0 <= nx < 10 and 0 <= ny < 10:
+                    self.stack.append((nx, ny, dx, dy))
+
+            else:  # MISS
+                self._miss(x, y, gamelogic)
+
+            self.turn = False
+            return False
+
+        # ================= BINARY SWEEP MODE =================
+        while self.row < 10:
+
+            if 0 <= self.col < 10:
+                x, y = self.row, self.col
+                self.col += self.direction
+            else:
+                # Switch side or move to next row
+                if self.phase == 'primary':
+                    self.phase = 'secondary'
+                    self.col = 5 if self.start_col == 4 else 4
+                    self.direction *= -1
+                else:
+                    self.phase = 'primary'
+                    self.col = self.start_col
+                    self.direction *= -1
+                    self.row += 1
+                continue
+
+            if (x, y) in self.visited:
+                continue
+
+            self.visited.add((x, y))
+
+            if gamelogic[x][y] == 'O':   # HIT
+                self._hit(x, y, gamelogic)
+
+                # Seed DFS stack with all directions
+                for dx, dy in [(-1,0),(1,0),(0,-1),(0,1)]:
+                    nx, ny = x + dx, y + dy
+                    if 0 <= nx < 10 and 0 <= ny < 10:
+                        self.stack.append((nx, ny, dx, dy))
+
+            else:
+                self._miss(x, y, gamelogic)
+
+            self.turn = False
+            return False
+
+        return False
+
+    # ---------------- Token helpers ----------------
+
+    def _hit(self, x, y, gamelogic):
+        gamelogic[x][y] = 'T'
+        TOKENS.append(Tokens(
+            REDTOKEN, pGameGrid[x][y], 'Hit',
+            FIRETOKENIMAGELIST, EXPLOSIONIMAGELIST, None
+        ))
+
+    def _miss(self, x, y, gamelogic):
+        gamelogic[x][y] = 'X'
+        TOKENS.append(Tokens(
+            BLUETOKEN, pGameGrid[x][y], 'Miss',
+            None, None, None
+        ))
+    
 
 class Tokens:
     def __init__(self, image, pos, action, imageList=None, explosionList=None, soundFile=None):
@@ -1188,6 +1432,12 @@ while RUNGAME:
                             computer = BFSLinearSearch()
                         if SELECTED_AI == 'BFS' and SELECTED_BEHAVIOUR == 'Binary Search':
                             computer = BFSBinarySearch()
+                        if SELECTED_AI == 'DFS' and SELECTED_BEHAVIOUR == 'Random':
+                            computer = DFSRandom()
+                        if SELECTED_AI == 'DFS' and SELECTED_BEHAVIOUR == 'Linear Search':
+                            computer = DFSLinearSearch()
+                        if SELECTED_AI == 'DFS' and SELECTED_BEHAVIOUR == 'Binary Search':
+                            computer = DFSBinarySearch()
 
                         # Reset game state
                         TOKENS.clear()
