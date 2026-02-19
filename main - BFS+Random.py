@@ -324,8 +324,13 @@ class Player:
                             TOKENS.append(Tokens(GREENTOKEN, grid[i][j], 'Miss', None, None, None))
                             self.turn = False
 
+#Common AI Class
+class ComputerAI:
+    def __init__(self):
+        self.turn = False
+
 # BFS Combinations
-class BFSRandom():
+class BFSRandom(ComputerAI):
     def __init__(self):
         super().__init__()
         self.visited = set()
@@ -340,7 +345,7 @@ class BFSRandom():
     def makeAttack(self, gamelogic):
         # ---------- BFSRandom (KILL MODE) ----------
         if self.pending:
-            x, y = self.pending.pop()
+            x, y = self.pending.pop(0)
 
             if (x, y) in self.visited:
                 return True
@@ -439,7 +444,7 @@ class BFSRandom():
                 yield nx, ny
 
 
-class BFSLinearSearch():
+class BFSLinearSearch(ComputerAI):
     def __init__(self):
         super().__init__()
         self.stack = []          # LINEAR SEARCH
@@ -520,7 +525,7 @@ class BFSLinearSearch():
             if 0 <= nx < 10 and 0 <= ny < 10:
                 yield nx, ny
 
-class BFSBinarySearch():
+class BFSBinarySearch(ComputerAI):
     def __init__(self):
         super().__init__()
 
@@ -623,11 +628,11 @@ class BFSBinarySearch():
         ))
 
 # DFS Combiniations
-class DFSRandom():
+class DFSRandom(ComputerAI):
     def __init__(self):
+        super().__init__()
         self.stack = []
         self.visited = set()
-        self.turn = False
 
     def makeAttack(self, gamelogic):
 
@@ -695,7 +700,7 @@ class DFSRandom():
             None, None, None
         ))
 
-class DFSLinearSearch():
+class DFSLinearSearch(ComputerAI):
     def __init__(self):
         super().__init__()
         self.stack = []          # DFS stack
@@ -768,7 +773,7 @@ class DFSLinearSearch():
 
         return False
     
-class DFSBinarySearch():
+class DFSBinarySearch(ComputerAI):
     def __init__(self):
         super().__init__()
 
@@ -783,8 +788,6 @@ class DFSBinarySearch():
         self.row = 0
         self.col = self.start_col
         self.phase = 'primary'    # primary → secondary
-
-        self.turn = False
 
     def makeAttack(self, gamelogic):
 
@@ -1292,8 +1295,8 @@ SELECTED_BEHAVIOUR = None  # '(0,0)', 'RANDOM', 'MIDDLE'
 
 # Variable size for laptop and desktop
 info = pygame.display.Info()
-WINDOW_WIDTH = int(info.current_w * 0.7)
-WINDOW_HEIGHT = int(info.current_h * 0.7)
+WINDOW_WIDTH = int(info.current_w * 0.85)
+WINDOW_HEIGHT = int(info.current_h * 0.85)
 
 WINDOW = pygame.display.set_mode(
     (WINDOW_WIDTH, WINDOW_HEIGHT),
