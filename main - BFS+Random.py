@@ -237,7 +237,7 @@ class Button:
                 self.randomizeShipPositions(pFleet, pGameGrid)
                 self.randomizeShipPositions(cFleet, cGameGrid)
             elif self.name == 'Reset':
-                self.resetShips(pFleet)
+                fullGameReset()
             elif self.name == 'Deploy':
                 self.deploymentPhase()
             elif self.name == 'Quit':
@@ -264,11 +264,7 @@ class Button:
 
 
     def restartTheGame(self):
-        TOKENS.clear()
-        self.resetShips(pFleet)
-        self.randomizeShipPositions(cFleet, cGameGrid)
-        updateGameLogic(cGameGrid, cFleet, cGameLogic)
-        updateGameLogic(pGameGrid, pFleet, pGameLogic)
+        fullGameReset()
 
 
     def updateButtons(self, gameStatus):
@@ -328,7 +324,12 @@ class Player:
 class ComputerAI:
     def __init__(self):
         self.turn = False
-        self.steps = 0   
+        self.steps = 0
+
+    def reset(self):
+        """Universal AI reset (called on game reset)"""
+        self.turn = False
+        self.steps = 0
 
 # BFS Combinations
 class BFSRandom(ComputerAI):
@@ -445,6 +446,12 @@ class BFSRandom(ComputerAI):
             if 0 <= nx < 10 and 0 <= ny < 10:
                 yield nx, ny
 
+    def reset(self):
+        super().reset()
+        self.visited.clear()
+        self.pending.clear()
+        self.hunting = True
+
 
 class BFSLinearSearch(ComputerAI):
     def __init__(self):
@@ -527,6 +534,12 @@ class BFSLinearSearch(ComputerAI):
             nx, ny = x + dx, y + dy
             if 0 <= nx < 10 and 0 <= ny < 10:
                 yield nx, ny
+
+    def reset(self):
+        super().reset()
+        self.stack.clear()
+        self.visited.clear()
+        self.hunting = True
 
 class BFSBinarySearch(ComputerAI):
     def __init__(self):
@@ -630,6 +643,17 @@ class BFSBinarySearch(ComputerAI):
             None, None, None
         ))
 
+    def reset(self):
+        super().reset()
+        self.queue.clear()
+        self.visited.clear()
+
+        self.start_col = random.choice([4, 5])
+        self.direction = random.choice([-1, 1])
+        self.row = 0
+        self.col = self.start_col
+        self.phase = 'primary'
+
 # DFS Combiniations
 class DFSRandom(ComputerAI):
     def __init__(self):
@@ -703,6 +727,11 @@ class DFSRandom(ComputerAI):
             None, None, None
         ))
 
+    def reset(self):
+        super().reset()
+        self.stack.clear()
+        self.visited.clear()
+
 class DFSLinearSearch(ComputerAI):
     def __init__(self):
         super().__init__()
@@ -775,6 +804,12 @@ class DFSLinearSearch(ComputerAI):
                     return False
 
         return False
+    
+    def reset(self):
+        super().reset()
+        self.stack.clear()
+        self.visited.clear()
+        self.hunting = True
     
 class DFSBinarySearch(ComputerAI):
     def __init__(self):
@@ -873,6 +908,17 @@ class DFSBinarySearch(ComputerAI):
             BLUETOKEN, pGameGrid[x][y], 'Miss',
             None, None, None
         ))
+
+    def reset(self):
+        super().reset()
+        self.stack.clear()
+        self.visited.clear()
+
+        self.start_col = random.choice([4, 5])
+        self.direction = random.choice([-1, 1])
+        self.row = 0
+        self.col = self.start_col
+        self.phase = 'primary'
     
 
 class Tokens:
@@ -1346,6 +1392,38 @@ def autoplay_player_attack():
         cGameLogic[x][y] = 'X'
         TOKENS.append(Tokens(GREENTOKEN, cGameGrid[x][y], 'Miss'))
 
+def fullGameReset():
+    global AUTOPLAY, TURN_PHASE, TURNTIMER
+    global pGameLogic, cGameLogic
+
+    # Stop all automated actions
+    AUTOPLAY = False
+    TURN_PHASE = 'PLAYER'
+    TURNTIMER = pygame.time.get_ticks()
+
+    # Clear board visuals
+    TOKENS.clear()
+
+    # Reset logic grids
+    pGameLogic = createGameLogic(ROWS, COLS)
+    cGameLogic = createGameLogic(ROWS, COLS)
+
+    updateGameLogic(pGameGrid, pFleet, pGameLogic)
+    updateGameLogic(cGameGrid, cFleet, cGameLogic)
+
+    # Reset ships
+    for ship in pFleet:
+        ship.returnToDefaultPosition()
+
+    randomizeShipPositions(cFleet, cGameGrid)
+
+    # Reset AI (THIS FIXES STEPS + GHOST SHOTS)
+    computer.reset()
+
+    # Ensure player starts
+    player1.turn = True
+    computer.turn = False
+
 #  Game Settings and Variables
 LOGICAL_WIDTH = 1260
 LOGICAL_HEIGHT = 960
@@ -1522,16 +1600,28 @@ while RUNGAME:
                         # BFS + Random Selected
                         if SELECTED_AI == 'BFS' and SELECTED_BEHAVIOUR == 'Random':
                             computer = BFSRandom()
+                            fullGameReset()
+                            GAMESTATE = 'Deployment'
                         if SELECTED_AI == 'BFS' and SELECTED_BEHAVIOUR == 'Linear Search':
                             computer = BFSLinearSearch()
+                            fullGameReset()
+                            GAMESTATE = 'Deployment'
                         if SELECTED_AI == 'BFS' and SELECTED_BEHAVIOUR == 'Binary Search':
                             computer = BFSBinarySearch()
+                            fullGameReset()
+                            GAMESTATE = 'Deployment'
                         if SELECTED_AI == 'DFS' and SELECTED_BEHAVIOUR == 'Random':
                             computer = DFSRandom()
+                            fullGameReset()
+                            GAMESTATE = 'Deployment'
                         if SELECTED_AI == 'DFS' and SELECTED_BEHAVIOUR == 'Linear Search':
                             computer = DFSLinearSearch()
+                            fullGameReset()
+                            GAMESTATE = 'Deployment'
                         if SELECTED_AI == 'DFS' and SELECTED_BEHAVIOUR == 'Binary Search':
                             computer = DFSBinarySearch()
+                            fullGameReset()
+                            GAMESTATE = 'Deployment'
 
                         # Reset game state
                         TOKENS.clear()
