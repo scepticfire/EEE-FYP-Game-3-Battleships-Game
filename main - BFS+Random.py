@@ -328,6 +328,7 @@ class Player:
 class ComputerAI:
     def __init__(self):
         self.turn = False
+        self.steps = 0   
 
 # BFS Combinations
 class BFSRandom(ComputerAI):
@@ -343,6 +344,7 @@ class BFSRandom(ComputerAI):
         return message
 
     def makeAttack(self, gamelogic):
+        self.steps += 1
         # ---------- BFSRandom (KILL MODE) ----------
         if self.pending:
             x, y = self.pending.pop(0)
@@ -452,6 +454,7 @@ class BFSLinearSearch(ComputerAI):
         self.hunting = True      # hunt vs linear search mode
 
     def makeAttack(self, gamelogic):
+        self.steps += 1
         # --- LINEAR SEARCH MODE ---
         if self.stack:
             x, y = self.stack.pop()
@@ -543,7 +546,7 @@ class BFSBinarySearch(ComputerAI):
         self.phase = 'primary'   # primary side → secondary side
 
     def makeAttack(self, gamelogic):
-
+        self.steps += 1
         # ========== BFS KILL MODE ==========
         if self.queue:
             x, y = self.queue.pop(0)
@@ -635,7 +638,7 @@ class DFSRandom(ComputerAI):
         self.visited = set()
 
     def makeAttack(self, gamelogic):
-
+        self.steps += 1
         # ===== DFS KILL MODE =====
         if self.stack:
             x, y = self.stack.pop()
@@ -708,7 +711,7 @@ class DFSLinearSearch(ComputerAI):
         self.hunting = True
 
     def makeAttack(self, gamelogic):
-
+        self.steps += 1
         # ===== DFS LINEAR MODE =====
         if self.stack:
             x, y, dx, dy = self.stack.pop()
@@ -790,7 +793,7 @@ class DFSBinarySearch(ComputerAI):
         self.phase = 'primary'    # primary → secondary
 
     def makeAttack(self, gamelogic):
-
+        self.steps += 1
         # ================= DFS KILL MODE =================
         if self.stack:
             x, y, dx, dy = self.stack.pop()
@@ -1101,12 +1104,43 @@ def displayRadarBlip(num, position):
 
 
 def takeTurns(p1, p2):
-    if p1.turn == True:
-        p2.turn = False
-    else:
+    global TURNTIMER, TURN_PHASE
+
+    if not AUTOPLAY:
+        # ===== NORMAL MANUAL MODE =====
+        if not p1.turn:
+            if not p2.makeAttack(pGameLogic):
+                p1.turn = True
+        return
+
+    # ===== AUTOPLAY MODE =====
+    current_time = pygame.time.get_ticks()
+
+    # Enforce delay between turns
+    if current_time - TURNTIMER < AI_DELAY:
+        return
+
+    # ---------- PLAYER AI TURN ----------
+    if TURN_PHASE == 'PLAYER':
+        autoplay_player_attack()
+
+        p1.turn = False
         p2.turn = True
-        if not p2.makeAttack(pGameLogic):
-            p1.turn = True
+
+        TURN_PHASE = 'ENEMY'
+        TURNTIMER = current_time
+        return
+
+    # ---------- ENEMY AI TURN ----------
+    if TURN_PHASE == 'ENEMY':
+        p2.makeAttack(pGameLogic)
+
+        p2.turn = False
+        p1.turn = True
+
+        TURN_PHASE = 'PLAYER'
+        TURNTIMER = current_time
+        return
 
 
 def checkForWinners(grid):
@@ -1190,7 +1224,13 @@ def deploymentScreen(window):
 
     updateGameLogic(pGameGrid, pFleet, pGameLogic)
     updateGameLogic(cGameGrid, cFleet, cGameLogic)
+    drawStepCounter(window, computer)
 
+    AUTOPLAY_BUTTON.active = True
+    AUTOPLAY_BUTTON.draw(window)
+
+    if AUTOPLAY:
+        AUTOPLAY_BUTTON.drawOutline(window, (0, 200, 0))
 
 def endScreen(window):
     window.fill((0, 0, 0))
@@ -1274,6 +1314,32 @@ def aiConfigScreen(window):
     )
     window.blit(bottom_img, (0, LOGICAL_HEIGHT - 300))
 
+def drawStepCounter(window, computer):
+    font = pygame.font.SysFont('Stencil', 24)
+    text = font.render(f'AI Steps: {computer.steps}', True, (0, 0, 0))
+    rect = text.get_rect()
+
+    LEFT_GRID_RIGHT = (ROWS * CELLSIZE)
+    RIGHT_GRID_LEFT = LOGICAL_WIDTH - (ROWS * CELLSIZE)
+    MID_X = (LEFT_GRID_RIGHT + RIGHT_GRID_LEFT) // 2
+
+    rect.center = (MID_X, 80)   # vertical position tweakable
+    window.blit(text, rect)
+    
+
+def autoplay_player_attack():
+    while True:
+        x = random.randint(0, 9)
+        y = random.randint(0, 9)
+        if cGameLogic[x][y] in (' ', 'O'):
+            break
+
+    if cGameLogic[x][y] == 'O':
+        cGameLogic[x][y] = 'T'
+        TOKENS.append(Tokens(REDTOKEN, cGameGrid[x][y], 'Hit'))
+    else:
+        cGameLogic[x][y] = 'X'
+        TOKENS.append(Tokens(GREENTOKEN, cGameGrid[x][y], 'Miss'))
 
 #  Game Settings and Variables
 LOGICAL_WIDTH = 1260
@@ -1287,6 +1353,9 @@ INDNUM = 0
 BLIPPOSITION = None
 TURNTIMER = pygame.time.get_ticks()
 GAMESTATE = 'Main Menu'
+AUTOPLAY = False
+AI_DELAY = 400  # milliseconds between moves
+TURN_PHASE = 'PLAYER'   # PLAYER always starts
 
 #for initial testing
 SELECTED_AI = None          # 'BFS', 'DFS', 'LINEAR', 'BINARY'
@@ -1373,6 +1442,17 @@ BEHAVIOUR_BUTTONS = [
 
 START_BUTTON = Button(BUTTONIMAGE1, (250, 100), (505, 450), 'Start')
 
+LEFT_GRID_RIGHT = (ROWS * CELLSIZE)
+RIGHT_GRID_LEFT = LOGICAL_WIDTH - (ROWS * CELLSIZE)
+MID_X = (LEFT_GRID_RIGHT + RIGHT_GRID_LEFT) // 2
+
+AUTOPLAY_BUTTON = Button(
+    BUTTONIMAGE,
+    (150, 50),
+    (MID_X - 75, 140),   # center horizontally, below step counter
+    'Autoplay'
+)
+
 
 REDTOKEN = loadImage('assets/images/tokens/redtoken.png', (CELLSIZE, CELLSIZE))
 GREENTOKEN = loadImage('assets/images/tokens/greentoken.png', (CELLSIZE, CELLSIZE))
@@ -1412,6 +1492,10 @@ while RUNGAME:
             RUNGAME = False
         elif event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 1:
+                # AUTOPLAY TOGGLE
+                if AUTOPLAY_BUTTON.rect.collidepoint(get_logical_mouse_pos()):
+                    AUTOPLAY = not AUTOPLAY
+                    TURNTIMER = pygame.time.get_ticks()
                 # ================= AI CONFIG SCREEN =================
                 if GAMESTATE == 'AI Config':
 
@@ -1494,7 +1578,6 @@ while RUNGAME:
                                 DEPLOYMENT = status
                             #GAMESTATE = STAGE[1]
                         button.actionOnPress()
-
 
 
             elif event.button == 3:
