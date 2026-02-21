@@ -1641,9 +1641,11 @@ while RUNGAME:
                             ship.selectShipAndMove()
 
                 else:
-                    if player1.turn == True:
+                # Only allow manual attack if AUTOPLAY is OFF
+                    if not AUTOPLAY and player1.turn:
                         player1.makeAttack(cGameGrid, cGameLogic)
-                        if player1.turn == False:
+
+                        if not player1.turn:
                             TURNTIMER = pygame.time.get_ticks()
 
                 for button in BUTTONS:
