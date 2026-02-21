@@ -1060,10 +1060,12 @@ def randomizeShipPositions(shiplist, gamegrid):
 
 
 def deploymentPhase(deployment):
-    if deployment == True:
-        return False
-    else:
-        return True
+    global AUTOPLAY, TURN_PHASE
+
+    AUTOPLAY = False           # disable autoplay
+    TURN_PHASE = 'PLAYER'      # reset turn order
+
+    return not deployment
 
 
 def pick_random_ship_location(gameLogic):
@@ -1226,8 +1228,11 @@ def deploymentScreen(window):
     updateGameLogic(cGameGrid, cFleet, cGameLogic)
     drawStepCounter(window, computer)
 
-    AUTOPLAY_BUTTON.active = True
+    AUTOPLAY_BUTTON.active = (DEPLOYMENT == False)
     AUTOPLAY_BUTTON.draw(window)
+
+    if AUTOPLAY and AUTOPLAY_BUTTON.active:
+        AUTOPLAY_BUTTON.drawOutline(window, (0, 200, 0))
 
     if AUTOPLAY:
         AUTOPLAY_BUTTON.drawOutline(window, (0, 200, 0))
@@ -1493,7 +1498,9 @@ while RUNGAME:
         elif event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 1:
                 # AUTOPLAY TOGGLE
-                if AUTOPLAY_BUTTON.rect.collidepoint(get_logical_mouse_pos()):
+                if (AUTOPLAY_BUTTON.active and
+                    AUTOPLAY_BUTTON.rect.collidepoint(get_logical_mouse_pos())):
+
                     AUTOPLAY = not AUTOPLAY
                     TURNTIMER = pygame.time.get_ticks()
                 # ================= AI CONFIG SCREEN =================
