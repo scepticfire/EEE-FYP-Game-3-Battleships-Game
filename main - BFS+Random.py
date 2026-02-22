@@ -1273,6 +1273,7 @@ def deploymentScreen(window):
     updateGameLogic(pGameGrid, pFleet, pGameLogic)
     updateGameLogic(cGameGrid, cFleet, cGameLogic)
     drawStepCounter(window, computer)
+    draw_ai_info_panel(window)
 
     AUTOPLAY_BUTTON.active = (DEPLOYMENT == False)
     AUTOPLAY_BUTTON.draw(window)
@@ -1424,6 +1425,45 @@ def fullGameReset():
     player1.turn = True
     computer.turn = False
 
+def create_selected_ai():
+    global computer
+
+    key = (SELECTED_AI, SELECTED_BEHAVIOUR)
+    if key not in AI_CLASS_MAP:
+        return
+
+    computer = AI_CLASS_MAP[key]()
+    computer.turn = False
+
+def draw_ai_info_panel(window):
+    if not SELECTED_AI or not SELECTED_BEHAVIOUR:
+        return
+
+    key = f"{SELECTED_AI}{SELECTED_BEHAVIOUR.replace(' ', '')}"
+    if key not in AI_INFO:
+        return
+
+    font_title = pygame.font.SysFont('Stencil', 26)
+    font_body = pygame.font.SysFont('Stencil', 20)
+
+    x = MID_X + 85
+    y = LOGICAL_HEIGHT - 400
+
+    pygame.draw.rect(window, (245, 245, 245), (x, y, 520, 400))
+    pygame.draw.rect(window, (0, 0, 0), (x, y, 520, 400), 2)
+
+    title = font_title.render(f"{SELECTED_AI} + {SELECTED_BEHAVIOUR}", True, (0, 0, 0))
+    window.blit(title, (x + 10, y + 10))
+
+    time = font_body.render(
+        f"Time Complexity: {AI_INFO[key]['time']}", True, (0, 0, 0)
+    )
+    window.blit(time, (x + 10, y + 45))
+
+    for i, line in enumerate(AI_INFO[key]['desc']):
+        txt = font_body.render(f"{line}", True, (0, 0, 0))
+        window.blit(txt, (x + 10, y + 80 + i * 25))
+
 #  Game Settings and Variables
 LOGICAL_WIDTH = 1260
 LOGICAL_HEIGHT = 960
@@ -1559,7 +1599,77 @@ RADARGRID = loadImage('assets/images/grids/grid_faint.png', ((ROWS) * CELLSIZE, 
 # MISSSOUND = pygame.mixer.Sound('assets/sounds/splash.wav')
 # MISSSOUND.set_volume(0.05)
 
+AI_INFO = {
+    "BFSRandom": {
+        "time": "O(N)",
+        "desc": [
+        "while ships remain:",
+        "  choose random cell",
+        "  if hit:",
+        "    enqueue neighbors",
+        "    explore level by level"
+    ]
+    },
+    "BFSLinearSearch": {
+        "time": "O(N)",
+        "desc": [
+        "for each cell in grid order:",
+        "  attack cell",
+        "  if hit:",
+        "    enqueue neighbors",
+        "    clear ship using BFS"
+    ]
+    },
+    "BFSBinarySearch": {
+        "time": "O(N)",
+        "desc": [
+        "start at center columns",
+        "sweep left and right",
+        "if hit:",
+        "  enqueue neighbors",
+        "  expand using BFS"
+    ]
+    },
+    "DFSRandom": {
+        "time": "O(N)",
+        "desc": [
+        "while ships remain:",
+        "  choose random cell",
+        "  if hit:",
+        "    push neighbor to stack",
+        "    go deep before backtracking"
+    ]
+    },
+    "DFSLinearSearch": {
+        "time": "O(N)",
+        "desc": [
+        "for each cell in grid order:",
+        "  attack cell",
+        "  if hit:",
+        "    push neighbor to stack",
+        "    follow one path deeply"
+    ]
+    },
+    "DFSBinarySearch": {
+        "time": "O(N)",
+        "desc": [
+        "start near grid center",
+        "sweep left and right",
+        "if hit:",
+        "  push neighbor to stack",
+        "  drill deep using DFS"
+    ]
+    }
+}
 
+AI_CLASS_MAP = {
+    ('BFS', 'Random'): BFSRandom,
+    ('BFS', 'Linear Search'): BFSLinearSearch,
+    ('BFS', 'Binary Search'): BFSBinarySearch,
+    ('DFS', 'Random'): DFSRandom,
+    ('DFS', 'Linear Search'): DFSLinearSearch,
+    ('DFS', 'Binary Search'): DFSBinarySearch,
+}
 
 #  Initialise Players
 player1 = Player()
