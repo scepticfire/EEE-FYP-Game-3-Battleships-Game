@@ -461,15 +461,16 @@ class BFSLinearSearch(ComputerAI):
         self.hunting = True      # hunt vs linear search mode
 
     def makeAttack(self, gamelogic):
-        self.steps += 1
-        # --- LINEAR SEARCH MODE ---
-        if self.stack:
+
+    # ---------- LINEAR SEARCH MODE ----------
+        while self.stack:
             x, y = self.stack.pop()
 
             if (x, y) in self.visited:
-                return True
+                continue   # <-- FIX: skip instead of return
 
             self.visited.add((x, y))
+            self.steps += 1
 
             if gamelogic[x][y] == 'O':  # HIT
                 gamelogic[x][y] = 'T'
@@ -478,18 +479,9 @@ class BFSLinearSearch(ComputerAI):
                     FIRETOKENIMAGELIST, EXPLOSIONIMAGELIST, None
                 ))
 
-                neighbors = list(self.get_neighbors(x, y))
-                random.shuffle(neighbors)
-                for n in neighbors:
-                    self.stack.append(n)
-
-                # Push neighbors (LINEAR SEARCH)
                 for nx, ny in self.get_neighbors(x, y):
                     if (nx, ny) not in self.visited:
                         self.stack.append((nx, ny))
-
-                self.turn = False
-                return False
 
             elif gamelogic[x][y] == ' ':
                 gamelogic[x][y] = 'X'
@@ -497,27 +489,30 @@ class BFSLinearSearch(ComputerAI):
                     BLUETOKEN, pGameGrid[x][y], 'Miss',
                     None, None, None
                 ))
-                self.turn = False
-                return False
 
-        # --- HUNT MODE ---
+            self.turn = False
+            return False
+
+        # ---------- HUNT MODE ----------
         for i in range(10):
             for j in range(10):
                 if (i, j) not in self.visited and gamelogic[i][j] in (' ', 'O'):
-                    self.visited.add((i, j))
 
-                    if gamelogic[i][j] == 'O':  # HIT
+                    self.visited.add((i, j))
+                    self.steps += 1
+
+                    if gamelogic[i][j] == 'O':
                         gamelogic[i][j] = 'T'
                         TOKENS.append(Tokens(
                             REDTOKEN, pGameGrid[i][j], 'Hit',
                             FIRETOKENIMAGELIST, EXPLOSIONIMAGELIST, None
                         ))
 
-                        # Seed LINEAR SEARCH from hit
                         for nx, ny in self.get_neighbors(i, j):
-                            self.stack.append((nx, ny))
+                            if (nx, ny) not in self.visited:
+                                self.stack.append((nx, ny))
 
-                    else:  # MISS
+                    else:
                         gamelogic[i][j] = 'X'
                         TOKENS.append(Tokens(
                             BLUETOKEN, pGameGrid[i][j], 'Miss',
@@ -527,6 +522,7 @@ class BFSLinearSearch(ComputerAI):
                     self.turn = False
                     return False
 
+        self.turn = False
         return False
 
     def get_neighbors(self, x, y):
@@ -740,30 +736,27 @@ class DFSLinearSearch(ComputerAI):
         self.hunting = True
 
     def makeAttack(self, gamelogic):
-        self.steps += 1
-        # ===== DFS LINEAR MODE =====
-        if self.stack:
+
+    # ---------- DFS LINEAR MODE ----------
+        while self.stack:
             x, y, dx, dy = self.stack.pop()
 
             if (x, y) in self.visited:
-                return True
+                continue   # <-- FIX
 
             self.visited.add((x, y))
+            self.steps += 1
 
-            if gamelogic[x][y] == 'O':  # HIT
+            if gamelogic[x][y] == 'O':
                 gamelogic[x][y] = 'T'
                 TOKENS.append(Tokens(
                     REDTOKEN, pGameGrid[x][y], 'Hit',
                     FIRETOKENIMAGELIST, EXPLOSIONIMAGELIST, None
                 ))
 
-                # Continue deeper in SAME direction
                 nx, ny = x + dx, y + dy
                 if 0 <= nx < 10 and 0 <= ny < 10:
                     self.stack.append((nx, ny, dx, dy))
-
-                self.turn = False
-                return False
 
             elif gamelogic[x][y] == ' ':
                 gamelogic[x][y] = 'X'
@@ -771,29 +764,31 @@ class DFSLinearSearch(ComputerAI):
                     BLUETOKEN, pGameGrid[x][y], 'Miss',
                     None, None, None
                 ))
-                self.turn = False
-                return False
 
-        # ===== LINEAR HUNT MODE =====
+            self.turn = False
+            return False
+
+        # ---------- LINEAR HUNT MODE ----------
         for i in range(10):
             for j in range(10):
                 if (i, j) not in self.visited and gamelogic[i][j] in (' ', 'O'):
-                    self.visited.add((i, j))
 
-                    if gamelogic[i][j] == 'O':  # HIT
+                    self.visited.add((i, j))
+                    self.steps += 1
+
+                    if gamelogic[i][j] == 'O':
                         gamelogic[i][j] = 'T'
                         TOKENS.append(Tokens(
                             REDTOKEN, pGameGrid[i][j], 'Hit',
                             FIRETOKENIMAGELIST, EXPLOSIONIMAGELIST, None
                         ))
 
-                        # Seed DFS with ALL directions
                         for dx, dy in [(-1,0),(1,0),(0,-1),(0,1)]:
                             nx, ny = i + dx, j + dy
                             if 0 <= nx < 10 and 0 <= ny < 10:
                                 self.stack.append((nx, ny, dx, dy))
 
-                    else:  # MISS
+                    else:
                         gamelogic[i][j] = 'X'
                         TOKENS.append(Tokens(
                             BLUETOKEN, pGameGrid[i][j], 'Miss',
@@ -803,6 +798,7 @@ class DFSLinearSearch(ComputerAI):
                     self.turn = False
                     return False
 
+        self.turn = False
         return False
     
     def reset(self):
