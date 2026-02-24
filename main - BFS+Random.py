@@ -1,7 +1,7 @@
 #  Module Imports
 import pygame
 import random
-
+#from collections import deque
 
 #  Module Initialization
 pygame.init()
@@ -333,98 +333,60 @@ class ComputerAI:
 
 # BFS Combinations
 class BFSRandom(ComputerAI):
+
     def __init__(self):
         super().__init__()
+        self.queue = []
         self.visited = set()
-        self.pending = []     # BFS frontier
-        self.hunting = True
-
-    def computerStatus(self, msg):
-        image = pygame.font.SysFont('Stencil', 22)
-        message = image.render(msg, 1, (0, 0, 0))
-        return message
 
     def makeAttack(self, gamelogic):
         self.steps += 1
-        # ---------- BFSRandom (KILL MODE) ----------
-        if self.pending:
-            x, y = self.pending.pop(0)
+
+        # ===== BFS KILL MODE =====
+        if self.queue:
+            x, y = self.queue.pop(0)
 
             if (x, y) in self.visited:
-                return True
+                return True   # skip but don't freeze
 
             self.visited.add((x, y))
 
             if gamelogic[x][y] == 'O':
                 self._hit(x, y, gamelogic)
-                self._bfs_expand(x, y)
+                self._expand_neighbors(x, y)
             else:
                 self._miss(x, y, gamelogic)
 
             self.turn = False
             return False
 
-        # ---------- PROBABILITY HUNT ----------
-        candidates = self._probability_hunt(gamelogic)
+        # ===== RANDOM HUNT MODE =====
+        while True:
+            x = random.randint(0, 9)
+            y = random.randint(0, 9)
 
-        if not candidates:
-            return False
-
-        x, y = candidates[0]   # highest probability
+            if (x, y) not in self.visited:
+                break
 
         self.visited.add((x, y))
 
         if gamelogic[x][y] == 'O':
             self._hit(x, y, gamelogic)
-            self._bfs_expand(x, y)
+            self._expand_neighbors(x, y)
         else:
             self._miss(x, y, gamelogic)
 
         self.turn = False
         return False
 
-    # ---------------- BFS ----------------
+    # ---------------- Helpers ----------------
 
-    def _bfs_expand(self, x, y):
-        for nx, ny in self.get_neighbors(x, y):
-            if (nx, ny) not in self.visited:
-                self.pending.append((nx, ny))
-
-    # ---------------- Probability ----------------
-
-    def _probability_hunt(self, grid):
-        scores = []
-
-        for i in range(10):
-            for j in range(10):
-                if (i, j) in self.visited:
-                    continue
-                if grid[i][j] not in (' ', 'O'):
-                    continue
-
-                # Parity optimization
-                if (i + j) % 2 != 0:
-                    continue
-
-                score = self._score_cell(i, j, grid)
-                scores.append(((i, j), score))
-
-        scores.sort(key=lambda x: x[1], reverse=True)
-        return [pos for pos, _ in scores]
-
-    def _score_cell(self, x, y, grid):
-        """Count possible ship placements passing through this cell"""
-        score = 0
-
+    def _expand_neighbors(self, x, y):
         for dx, dy in [(-1,0),(1,0),(0,-1),(0,1)]:
             nx, ny = x + dx, y + dy
             if 0 <= nx < 10 and 0 <= ny < 10:
-                if grid[nx][ny] in (' ', 'O'):
-                    score += 1
-
-        return score
-
-    # ---------------- Helpers ----------------
+                if (nx, ny) not in self.visited:
+                    self.queue.append((nx, ny))
 
     def _hit(self, x, y, gamelogic):
         gamelogic[x][y] = 'T'
@@ -440,17 +402,10 @@ class BFSRandom(ComputerAI):
             None, None, None
         ))
 
-    def get_neighbors(self, x, y):
-        for dx, dy in [(-1,0),(1,0),(0,-1),(0,1)]:
-            nx, ny = x + dx, y + dy
-            if 0 <= nx < 10 and 0 <= ny < 10:
-                yield nx, ny
-
     def reset(self):
         super().reset()
+        self.queue.clear()
         self.visited.clear()
-        self.pending.clear()
-        self.hunting = True
 
 
 class BFSLinearSearch(ComputerAI):
