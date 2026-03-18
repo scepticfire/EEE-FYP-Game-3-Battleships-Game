@@ -1607,7 +1607,7 @@ AI_INFO = {
         "time": "O(N)",
         "desc": [
         "start at center columns",
-        "sweep left and right",
+        "sweep left then right",
         "if hit:",
         "  enqueue neighbors",
         "  explore level by level"
@@ -1636,8 +1636,8 @@ AI_INFO = {
     "DFSBinarySearch": {
         "time": "O(N)",
         "desc": [
-        "start near grid center",
-        "sweep left and right",
+        "start at center columns",
+        "sweep left then right",
         "if hit:",
         "  push neighbor to stack",
         "    go deep before backtracking"
