@@ -613,19 +613,25 @@ class DFSRandom(ComputerAI):
 
     def makeAttack(self, gamelogic):
         self.steps += 1
+
         # ===== DFS KILL MODE =====
-        if self.stack:
-            x, y = self.stack.pop()
+        while self.stack:
+            x, y, dx, dy = self.stack.pop()
 
             if (x, y) in self.visited:
-                return True
+                continue   # <-- IMPORTANT (not return)
 
             self.visited.add((x, y))
 
-            if gamelogic[x][y] == 'O':
+            if gamelogic[x][y] == 'O':   # HIT
                 self._hit(x, y, gamelogic)
-                self._dfs_expand(x, y)
-            else:
+
+                # Continue deeper in SAME direction
+                nx, ny = x + dx, y + dy
+                if 0 <= nx < 10 and 0 <= ny < 10:
+                    self.stack.append((nx, ny, dx, dy))
+
+            else:   # MISS → backtrack automatically
                 self._miss(x, y, gamelogic)
 
             self.turn = False
@@ -641,26 +647,20 @@ class DFSRandom(ComputerAI):
 
         self.visited.add((x, y))
 
-        if gamelogic[x][y] == 'O':
+        if gamelogic[x][y] == 'O':   # HIT
             self._hit(x, y, gamelogic)
-            self._dfs_expand(x, y)
+
+            # Seed DFS directions (like other DFS classes)
+            for dx, dy in [(-1,0),(1,0),(0,-1),(0,1)]:
+                nx, ny = x + dx, y + dy
+                if 0 <= nx < 10 and 0 <= ny < 10:
+                    self.stack.append((nx, ny, dx, dy))
+
         else:
             self._miss(x, y, gamelogic)
 
         self.turn = False
         return False
-
-    # -------- DFS helpers --------
-    def _dfs_expand(self, x, y):
-        for nx, ny in self.get_neighbors(x, y):
-            if (nx, ny) not in self.visited:
-                self.stack.append((nx, ny))
-
-    def get_neighbors(self, x, y):
-        for dx, dy in [(-1,0),(1,0),(0,-1),(0,1)]:
-            nx, ny = x + dx, y + dy
-            if 0 <= nx < 10 and 0 <= ny < 10:
-                yield nx, ny
 
     # -------- Token helpers --------
     def _hit(self, x, y, gamelogic):
