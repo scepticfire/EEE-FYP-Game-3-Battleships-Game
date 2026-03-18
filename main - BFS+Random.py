@@ -1234,6 +1234,9 @@ def deploymentScreen(window):
     if AUTOPLAY:
         AUTOPLAY_BUTTON.drawOutline(window, (0, 200, 0))
 
+    if GAME_OVER:
+        drawGameOverOverlay(window)
+
 def endScreen(window):
     window.fill((0, 0, 0))
 
@@ -1292,7 +1295,7 @@ def aiConfigScreen(window):
             btn.drawOutline(window)
 
     subtitle = pygame.font.SysFont('Stencil', 36).render(
-        'Choose Starting Position:', True, (0, 0, 0)
+        'Choose Supporting Algorithm:', True, (0, 0, 0)
     )
     window.blit(subtitle, (420, 240))
 
@@ -1344,10 +1347,12 @@ def autoplay_player_attack():
         TOKENS.append(Tokens(GREENTOKEN, cGameGrid[x][y], 'Miss'))
 
 def fullGameReset():
-    global AUTOPLAY, TURN_PHASE, TURNTIMER
+    global AUTOPLAY, TURN_PHASE, TURNTIMER, GAME_OVER, WINNER
     global pGameLogic, cGameLogic
 
     # Stop all automated actions
+    GAME_OVER = False
+    WINNER = None
     AUTOPLAY = False
     TURN_PHASE = 'PLAYER'
     TURNTIMER = pygame.time.get_ticks()
@@ -1414,6 +1419,32 @@ def draw_ai_info_panel(window):
         txt = font_body.render(f"{line}", True, (0, 0, 0))
         window.blit(txt, (x + 10, y + 80 + i * 25))
 
+def drawGameOverOverlay(window):
+    overlay = pygame.Surface((LOGICAL_WIDTH, LOGICAL_HEIGHT))
+    overlay.set_alpha(180)  # transparency
+    overlay.fill((0, 0, 0))
+    window.blit(overlay, (0, 0))
+
+    font_big = pygame.font.SysFont('Stencil', 80)
+    font_small = pygame.font.SysFont('Stencil', 30)
+
+    if WINNER == 'PLAYER':
+        text = font_big.render('YOU WIN!', True, (0, 255, 0))
+    else:
+        text = font_big.render('YOU LOSE!', True, (255, 0, 0))
+
+    text_rect = text.get_rect(center=(LOGICAL_WIDTH // 2, LOGICAL_HEIGHT // 2 - 50))
+    window.blit(text, text_rect)
+
+    sub = font_small.render(
+        'Click REDEPLOY to replay | Press SPACE for AI menu',
+        True,
+        (255, 255, 255)
+    )
+    sub_rect = sub.get_rect(center=(LOGICAL_WIDTH // 2, LOGICAL_HEIGHT // 2 + 40))
+    window.blit(sub, sub_rect)
+
+
 #  Game Settings and Variables
 LOGICAL_WIDTH = 1260
 LOGICAL_HEIGHT = 960
@@ -1429,6 +1460,8 @@ GAMESTATE = 'Main Menu'
 AUTOPLAY = False
 AI_DELAY = 400  # milliseconds between moves
 TURN_PHASE = 'PLAYER'   # PLAYER always starts
+GAME_OVER = False
+WINNER = None
 
 #for initial testing
 SELECTED_AI = None          # 'BFS', 'DFS', 'LINEAR', 'BINARY'
@@ -1633,6 +1666,10 @@ while RUNGAME:
     for event in pygame.event.get():
         if event.type == pygame.QUIT:
             RUNGAME = False
+        elif event.type == pygame.KEYDOWN:
+            if event.key == pygame.K_SPACE and GAME_OVER:
+                fullGameReset()
+                GAMESTATE = 'AI Config'
         elif event.type == pygame.MOUSEBUTTONDOWN:
             if event.button == 1:
                 # AUTOPLAY TOGGLE
@@ -1702,7 +1739,7 @@ while RUNGAME:
 
                 else:
                 # Only allow manual attack if AUTOPLAY is OFF
-                    if not AUTOPLAY and player1.turn:
+                    if not AUTOPLAY and player1.turn and not GAME_OVER:
                         player1.makeAttack(cGameGrid, cGameLogic)
 
                         if not player1.turn:
@@ -1752,11 +1789,17 @@ while RUNGAME:
     if GAMESTATE == 'Deployment' and DEPLOYMENT != True:
         player1Wins = checkForWinners(cGameLogic)
         computerWins = checkForWinners(pGameLogic)
-        if player1Wins == True or computerWins == True:
-            GAMESTATE = STAGE[2]
+        if player1Wins:
+            GAME_OVER = True
+            WINNER = 'PLAYER'
 
+        elif computerWins:
+            GAME_OVER = True
+            WINNER = 'AI'
 
+    if not GAME_OVER:
+        takeTurns(player1, computer)
 
-    takeTurns(player1, computer)
+    #takeTurns(player1, computer)
 
 pygame.quit()
