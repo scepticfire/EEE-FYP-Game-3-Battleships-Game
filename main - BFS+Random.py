@@ -1600,7 +1600,7 @@ AI_INFO = {
         "  attack cell",
         "  if hit:",
         "    enqueue neighbors",
-        "    clear ship using BFS"
+        "    explore level by level"
     ]
     },
     "BFSBinarySearch": {
@@ -1610,7 +1610,7 @@ AI_INFO = {
         "sweep left and right",
         "if hit:",
         "  enqueue neighbors",
-        "  expand using BFS"
+        "  explore level by level"
     ]
     },
     "DFSRandom": {
@@ -1630,7 +1630,7 @@ AI_INFO = {
         "  attack cell",
         "  if hit:",
         "    push neighbor to stack",
-        "    follow one path deeply"
+        "    go deep before backtracking"
     ]
     },
     "DFSBinarySearch": {
@@ -1640,7 +1640,7 @@ AI_INFO = {
         "sweep left and right",
         "if hit:",
         "  push neighbor to stack",
-        "  drill deep using DFS"
+        "    go deep before backtracking"
     ]
     }
 }
