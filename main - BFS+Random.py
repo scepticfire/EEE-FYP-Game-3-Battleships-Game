@@ -1,7 +1,6 @@
 #  Module Imports
 import pygame
 import random
-#from collections import deque
 
 #  Module Initialization
 pygame.init()
@@ -1282,9 +1281,9 @@ def aiConfigScreen(window):
     window.fill((0, 150, 170))  # teal background
 
     title = pygame.font.SysFont('Stencil', 36).render(
-        'Choose AI Algorithm:', True, (0, 0, 0)
+        'Choose Computer Algorithm:', True, (0, 0, 0)
     )
-    window.blit(title, (450, 80))
+    window.blit(title, (400, 80))
 
     for btn in AI_BUTTONS:
         btn.active = True
@@ -1453,7 +1452,7 @@ GAMESCREEN = pygame.Surface((LOGICAL_WIDTH, LOGICAL_HEIGHT))
 
 
 #  Pygame Display Initialization
-pygame.display.set_caption('Battle Ship')
+pygame.display.set_caption('Battleship Pygame')
 
 
 #  Game Lists/Dictionaries
@@ -1503,15 +1502,15 @@ BUTTONS = [
 
 # --- AI Algorithm Buttons ---
 AI_BUTTONS = [
-    Button(BUTTONIMAGE, (150, 50), (200, 150), 'BFS'),
-    Button(BUTTONIMAGE, (150, 50), (380, 150), 'DFS'),
+    Button(BUTTONIMAGE, (150, 50), (430, 150), 'BFS'),
+    Button(BUTTONIMAGE, (150, 50), (600, 150), 'DFS'),
 ]
 
 # --- AI Behaviour Buttons ---
 BEHAVIOUR_BUTTONS = [
-    Button(BUTTONIMAGE, (150, 50), (260, 300), 'Random'),
-    Button(BUTTONIMAGE, (150, 50), (440, 300), 'Linear Search'),
-    Button(BUTTONIMAGE, (150, 50), (620, 300), 'Binary Search')
+    Button(BUTTONIMAGE, (150, 50), (300, 300), 'Random'),
+    Button(BUTTONIMAGE, (150, 50), (500, 300), 'Linear Search'),
+    Button(BUTTONIMAGE, (150, 50), (700, 300), 'Binary Search')
 ]
 
 START_BUTTON = Button(BUTTONIMAGE1, (250, 100), (505, 450), 'Start')
