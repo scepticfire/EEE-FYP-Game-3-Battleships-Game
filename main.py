@@ -580,7 +580,7 @@ class DFSBinarySearch(DFSPure):
         self.row = 0
         self.col = self.start_col
         self.phase = 0
-        
+
 
 class Tokens:
     def __init__(self, image, pos, action, imageList=None, explosionList=None, soundFile=None):
@@ -909,11 +909,13 @@ def deploymentScreen(window):
         ship.snapToGrid(cGameGrid)
 
     for button in BUTTONS:
-        if button.name in ['Randomize', 'Reset', 'Deploy', 'Quit', 'Radar Scan', 'Redeploy']:
-            button.active = True
+        button.active = button.name in ['Randomize', 'Reset', 'Deploy', 'Quit', 'Redeploy']
+
+        if button.name == 'Radar Scan':
+            button.active = (not AUTOPLAY and not GAME_OVER)
+
+        if button.active:
             button.draw(window)
-        else:
-            button.active = False
 
 
     radarScan = displayRadarScanner(RADARGRIDIMAGES, INDNUM, SCANNER)
@@ -1467,7 +1469,10 @@ while RUNGAME:
                         elif button.name == 'Quit' and button.active == True:
                             RUNGAME = False
                         elif button.name == 'Radar Scan' and button.active == True:
-                            SCANNER = True
+                            if not AUTOPLAY and not GAME_OVER:
+                                SCANNER = True
+                                INDNUM = 0
+                                BLIPPOSITION = pick_random_ship_location(cGameLogic)
                             INDNUM = 0
                             BLIPPOSITION = pick_random_ship_location(cGameLogic)
                         elif button.name == 'Start' and button.active:
