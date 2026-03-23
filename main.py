@@ -339,7 +339,7 @@ class BFSPure(ComputerAI):
     def makeAttack(self, gamelogic):
         self.steps += 1
 
-        # ===== BFS KILL MODE =====
+        #Destroy Mode
         if self.queue:
             x, y = self.queue.pop(0)
 
@@ -357,7 +357,7 @@ class BFSPure(ComputerAI):
             self.turn = False
             return False
 
-        # ===== HUNT MODE (delegated) =====
+        #Hunting Mode
         x, y = self.hunt_target(gamelogic)
 
         self.visited.add((x, y))
@@ -371,7 +371,7 @@ class BFSPure(ComputerAI):
         self.turn = False
         return False
 
-    # -------- Shared helpers --------
+    #Helper Functions
     def expand_neighbors(self, x, y):
         for dx, dy in [(-1,0),(1,0),(0,-1),(0,1)]:
             nx, ny = x + dx, y + dy
@@ -398,7 +398,6 @@ class BFSPure(ComputerAI):
         self.queue.clear()
         self.visited.clear()
 
-    # -------- To override --------
     def hunt_target(self, gamelogic):
         raise NotImplementedError
     
@@ -411,7 +410,7 @@ class DFSPure(ComputerAI):
     def makeAttack(self, gamelogic):
         self.steps += 1
 
-        # ===== DFS KILL MODE =====
+        #Destroy mode
         while self.stack:
             x, y, dx, dy = self.stack.pop()
 
@@ -432,15 +431,13 @@ class DFSPure(ComputerAI):
             self.turn = False
             return False
 
-        # ===== HUNT MODE =====
+        #Hunting Mode
         x, y = self.hunt_target(gamelogic)
 
         self.visited.add((x, y))
 
         if gamelogic[x][y] == 'O':
             self._hit(x, y, gamelogic)
-
-            # seed DFS directions
             for dx, dy in [(-1,0),(1,0),(0,-1),(0,1)]:
                 nx, ny = x + dx, y + dy
                 if 0 <= nx < 10 and 0 <= ny < 10:
@@ -473,7 +470,7 @@ class DFSPure(ComputerAI):
     def hunt_target(self, gamelogic):
         raise NotImplementedError
     
-# BFS Combinations
+#BFS Combinations
 class BFSRandom(BFSPure):
     def hunt_target(self, gamelogic):
         while True:
@@ -493,15 +490,13 @@ class BFSBinarySearch(BFSPure):
     def __init__(self):
         super().__init__()
         self.start_col = random.choice([4, 5])
-        self.direction = random.choice([-1, 1])  # initial direction
+        self.direction = random.choice([-1, 1])  #initial direction
         self.row = 0
         self.col = self.start_col
-        self.phase = 0  # 0 = first sweep, 1 = reverse sweep
+        self.phase = 0
 
     def hunt_target(self, gamelogic):
         while self.row < 10:
-
-            # VALID CELL
             if 0 <= self.col < 10:
                 x, y = self.row, self.col
                 self.col += self.direction
@@ -509,15 +504,14 @@ class BFSBinarySearch(BFSPure):
                 if (x, y) not in self.visited:
                     return x, y
 
-            # OUT OF BOUNDS → HANDLE DIRECTION SWITCH
             else:
                 if self.phase == 0:
-                    # reverse direction from middle
+                    #Reverse direction from middle
                     self.phase = 1
                     self.direction *= -1
                     self.col = self.start_col + self.direction
                 else:
-                    # BOTH DIRECTIONS DONE → NEXT ROW
+                    #Move to next row
                     self.row += 1
                     self.phase = 0
                     self.direction = random.choice([-1, 1])
