@@ -319,7 +319,7 @@ class Player:
                             TOKENS.append(Tokens(GREENTOKEN, grid[i][j], 'Miss', None, None, None))
                             self.turn = False
 
-#Common AI Class
+#Common AI Classes
 class ComputerAI:
     def __init__(self):
         self.turn = False
@@ -329,10 +329,8 @@ class ComputerAI:
         """Universal AI reset (called on game reset)"""
         self.turn = False
         self.steps = 0
-
-# BFS Combinations
-class BFSRandom(ComputerAI):
-
+        
+class BFSPure(ComputerAI):
     def __init__(self):
         super().__init__()
         self.queue = []
@@ -346,41 +344,35 @@ class BFSRandom(ComputerAI):
             x, y = self.queue.pop(0)
 
             if (x, y) in self.visited:
-                return True   # skip but don't freeze
+                return True
 
             self.visited.add((x, y))
 
             if gamelogic[x][y] == 'O':
                 self._hit(x, y, gamelogic)
-                self._expand_neighbors(x, y)
+                self.expand_neighbors(x, y)
             else:
                 self._miss(x, y, gamelogic)
 
             self.turn = False
             return False
 
-        # ===== RANDOM HUNT MODE =====
-        while True:
-            x = random.randint(0, 9)
-            y = random.randint(0, 9)
-
-            if (x, y) not in self.visited:
-                break
+        # ===== HUNT MODE (delegated) =====
+        x, y = self.hunt_target(gamelogic)
 
         self.visited.add((x, y))
 
         if gamelogic[x][y] == 'O':
             self._hit(x, y, gamelogic)
-            self._expand_neighbors(x, y)
+            self.expand_neighbors(x, y)
         else:
             self._miss(x, y, gamelogic)
 
         self.turn = False
         return False
 
-    # ---------------- Helpers ----------------
-
-    def _expand_neighbors(self, x, y):
+    # -------- Shared helpers --------
+    def expand_neighbors(self, x, y):
         for dx, dy in [(-1,0),(1,0),(0,-1),(0,1)]:
             nx, ny = x + dx, y + dy
             if 0 <= nx < 10 and 0 <= ny < 10:
@@ -406,206 +398,11 @@ class BFSRandom(ComputerAI):
         self.queue.clear()
         self.visited.clear()
 
-
-class BFSLinearSearch(ComputerAI):
-    def __init__(self):
-        super().__init__()
-        self.stack = []          # LINEAR SEARCH
-        self.visited = set()     # visited cells
-        self.hunting = True      # hunt vs linear search mode
-
-    def makeAttack(self, gamelogic):
-
-    # ---------- LINEAR SEARCH MODE ----------
-        while self.stack:
-            x, y = self.stack.pop()
-
-            if (x, y) in self.visited:
-                continue   # <-- FIX: skip instead of return
-
-            self.visited.add((x, y))
-            self.steps += 1
-
-            if gamelogic[x][y] == 'O':  # HIT
-                gamelogic[x][y] = 'T'
-                TOKENS.append(Tokens(
-                    REDTOKEN, pGameGrid[x][y], 'Hit',
-                    FIRETOKENIMAGELIST, EXPLOSIONIMAGELIST, None
-                ))
-
-                for nx, ny in self.get_neighbors(x, y):
-                    if (nx, ny) not in self.visited:
-                        self.stack.append((nx, ny))
-
-            elif gamelogic[x][y] == ' ':
-                gamelogic[x][y] = 'X'
-                TOKENS.append(Tokens(
-                    BLUETOKEN, pGameGrid[x][y], 'Miss',
-                    None, None, None
-                ))
-
-            self.turn = False
-            return False
-
-        # ---------- HUNT MODE ----------
-        for i in range(10):
-            for j in range(10):
-                if (i, j) not in self.visited and gamelogic[i][j] in (' ', 'O'):
-
-                    self.visited.add((i, j))
-                    self.steps += 1
-
-                    if gamelogic[i][j] == 'O':
-                        gamelogic[i][j] = 'T'
-                        TOKENS.append(Tokens(
-                            REDTOKEN, pGameGrid[i][j], 'Hit',
-                            FIRETOKENIMAGELIST, EXPLOSIONIMAGELIST, None
-                        ))
-
-                        for nx, ny in self.get_neighbors(i, j):
-                            if (nx, ny) not in self.visited:
-                                self.stack.append((nx, ny))
-
-                    else:
-                        gamelogic[i][j] = 'X'
-                        TOKENS.append(Tokens(
-                            BLUETOKEN, pGameGrid[i][j], 'Miss',
-                            None, None, None
-                        ))
-
-                    self.turn = False
-                    return False
-
-        self.turn = False
-        return False
-
-    def get_neighbors(self, x, y):
-        for dx, dy in [(-1,0), (1,0), (0,-1), (0,1)]:
-            nx, ny = x + dx, y + dy
-            if 0 <= nx < 10 and 0 <= ny < 10:
-                yield nx, ny
-
-    def reset(self):
-        super().reset()
-        self.stack.clear()
-        self.visited.clear()
-        self.hunting = True
-
-class BFSBinarySearch(ComputerAI):
-    def __init__(self):
-        super().__init__()
-
-        # --- BFS (kill mode) ---
-        self.queue = []
-        self.visited = set()
-        self.hunting = True
-
-        # --- Binary-search-style sweep ---
-        self.start_col = random.choice([4, 5])   # E or F
-        self.direction = random.choice([-1, 1])  # left or right
-
-        self.row = 0
-        self.col = self.start_col
-        self.phase = 'primary'   # primary side → secondary side
-
-    def makeAttack(self, gamelogic):
-        self.steps += 1
-        # ========== BFS KILL MODE ==========
-        if self.queue:
-            x, y = self.queue.pop(0)
-
-            if (x, y) in self.visited:
-                return True
-
-            self.visited.add((x, y))
-
-            if gamelogic[x][y] == 'O':
-                self._hit(x, y, gamelogic)
-                self._bfs_expand(x, y)
-            else:
-                self._miss(x, y, gamelogic)
-
-            self.turn = False
-            return False
-
-        # ========== BINARY SWEEP MODE ==========
-        while self.row < 10:
-
-            if 0 <= self.col < 10:
-                x, y = self.row, self.col
-                self.col += self.direction
-            else:
-                # End reached → switch side
-                if self.phase == 'primary':
-                    self.phase = 'secondary'
-                    self.col = 5 if self.start_col == 4 else 4
-                    self.direction *= -1
-                else:
-                    # Finished both sides → next row
-                    self.phase = 'primary'
-                    self.col = self.start_col
-                    self.direction *= -1
-                    self.row += 1
-                continue
-
-            if (x, y) in self.visited:
-                continue
-
-            self.visited.add((x, y))
-
-            if gamelogic[x][y] == 'O':
-                self._hit(x, y, gamelogic)
-                self._bfs_expand(x, y)
-            else:
-                self._miss(x, y, gamelogic)
-
-            self.turn = False
-            return False
-
-        return False
-
-    # ---------------- BFS helpers ----------------
-
-    def _bfs_expand(self, x, y):
-        for nx, ny in self.get_neighbors(x, y):
-            if (nx, ny) not in self.visited:
-                self.queue.append((nx, ny))
-
-    def get_neighbors(self, x, y):
-        for dx, dy in [(-1,0),(1,0),(0,-1),(0,1)]:
-            nx, ny = x + dx, y + dy
-            if 0 <= nx < 10 and 0 <= ny < 10:
-                yield nx, ny
-
-    # ---------------- Token helpers ----------------
-
-    def _hit(self, x, y, gamelogic):
-        gamelogic[x][y] = 'T'
-        TOKENS.append(Tokens(
-            REDTOKEN, pGameGrid[x][y], 'Hit',
-            FIRETOKENIMAGELIST, EXPLOSIONIMAGELIST, None
-        ))
-
-    def _miss(self, x, y, gamelogic):
-        gamelogic[x][y] = 'X'
-        TOKENS.append(Tokens(
-            BLUETOKEN, pGameGrid[x][y], 'Miss',
-            None, None, None
-        ))
-
-    def reset(self):
-        super().reset()
-        self.queue.clear()
-        self.visited.clear()
-
-        self.start_col = random.choice([4, 5])
-        self.direction = random.choice([-1, 1])
-        self.row = 0
-        self.col = self.start_col
-        self.phase = 'primary'
-
-# DFS Combiniations
-class DFSRandom(ComputerAI):
+    # -------- To override --------
+    def hunt_target(self, gamelogic):
+        raise NotImplementedError
+    
+class DFSPure(ComputerAI):
     def __init__(self):
         super().__init__()
         self.stack = []
@@ -619,50 +416,41 @@ class DFSRandom(ComputerAI):
             x, y, dx, dy = self.stack.pop()
 
             if (x, y) in self.visited:
-                continue   # <-- IMPORTANT (not return)
+                continue
 
             self.visited.add((x, y))
 
-            if gamelogic[x][y] == 'O':   # HIT
+            if gamelogic[x][y] == 'O':
                 self._hit(x, y, gamelogic)
 
-                # Continue deeper in SAME direction
                 nx, ny = x + dx, y + dy
                 if 0 <= nx < 10 and 0 <= ny < 10:
                     self.stack.append((nx, ny, dx, dy))
-
-            else:   # MISS → backtrack automatically
+            else:
                 self._miss(x, y, gamelogic)
 
             self.turn = False
             return False
 
-        # ===== RANDOM HUNT MODE =====
-        while True:
-            x = random.randint(0, 9)
-            y = random.randint(0, 9)
-
-            if (x, y) not in self.visited:
-                break
+        # ===== HUNT MODE =====
+        x, y = self.hunt_target(gamelogic)
 
         self.visited.add((x, y))
 
-        if gamelogic[x][y] == 'O':   # HIT
+        if gamelogic[x][y] == 'O':
             self._hit(x, y, gamelogic)
 
-            # Seed DFS directions (like other DFS classes)
+            # seed DFS directions
             for dx, dy in [(-1,0),(1,0),(0,-1),(0,1)]:
                 nx, ny = x + dx, y + dy
                 if 0 <= nx < 10 and 0 <= ny < 10:
                     self.stack.append((nx, ny, dx, dy))
-
         else:
             self._miss(x, y, gamelogic)
 
         self.turn = False
         return False
 
-    # -------- Token helpers --------
     def _hit(self, x, y, gamelogic):
         gamelogic[x][y] = 'T'
         TOKENS.append(Tokens(
@@ -682,193 +470,106 @@ class DFSRandom(ComputerAI):
         self.stack.clear()
         self.visited.clear()
 
-class DFSLinearSearch(ComputerAI):
-    def __init__(self):
-        super().__init__()
-        self.stack = []          # DFS stack
-        self.visited = set()
-        self.hunting = True
-
-    def makeAttack(self, gamelogic):
-
-    # ---------- DFS LINEAR MODE ----------
-        while self.stack:
-            x, y, dx, dy = self.stack.pop()
-
-            if (x, y) in self.visited:
-                continue   # <-- FIX
-
-            self.visited.add((x, y))
-            self.steps += 1
-
-            if gamelogic[x][y] == 'O':
-                gamelogic[x][y] = 'T'
-                TOKENS.append(Tokens(
-                    REDTOKEN, pGameGrid[x][y], 'Hit',
-                    FIRETOKENIMAGELIST, EXPLOSIONIMAGELIST, None
-                ))
-
-                nx, ny = x + dx, y + dy
-                if 0 <= nx < 10 and 0 <= ny < 10:
-                    self.stack.append((nx, ny, dx, dy))
-
-            elif gamelogic[x][y] == ' ':
-                gamelogic[x][y] = 'X'
-                TOKENS.append(Tokens(
-                    BLUETOKEN, pGameGrid[x][y], 'Miss',
-                    None, None, None
-                ))
-
-            self.turn = False
-            return False
-
-        # ---------- LINEAR HUNT MODE ----------
+    def hunt_target(self, gamelogic):
+        raise NotImplementedError
+    
+# BFS Combinations
+class BFSRandom(BFSPure):
+    def hunt_target(self, gamelogic):
+        while True:
+            x = random.randint(0, 9)
+            y = random.randint(0, 9)
+            if (x, y) not in self.visited:
+                return x, y
+            
+class BFSLinearSearch(BFSPure):
+    def hunt_target(self, gamelogic):
         for i in range(10):
             for j in range(10):
-                if (i, j) not in self.visited and gamelogic[i][j] in (' ', 'O'):
-
-                    self.visited.add((i, j))
-                    self.steps += 1
-
-                    if gamelogic[i][j] == 'O':
-                        gamelogic[i][j] = 'T'
-                        TOKENS.append(Tokens(
-                            REDTOKEN, pGameGrid[i][j], 'Hit',
-                            FIRETOKENIMAGELIST, EXPLOSIONIMAGELIST, None
-                        ))
-
-                        for dx, dy in [(-1,0),(1,0),(0,-1),(0,1)]:
-                            nx, ny = i + dx, j + dy
-                            if 0 <= nx < 10 and 0 <= ny < 10:
-                                self.stack.append((nx, ny, dx, dy))
-
-                    else:
-                        gamelogic[i][j] = 'X'
-                        TOKENS.append(Tokens(
-                            BLUETOKEN, pGameGrid[i][j], 'Miss',
-                            None, None, None
-                        ))
-
-                    self.turn = False
-                    return False
-
-        self.turn = False
-        return False
-    
-    def reset(self):
-        super().reset()
-        self.stack.clear()
-        self.visited.clear()
-        self.hunting = True
-    
-class DFSBinarySearch(ComputerAI):
+                if (i, j) not in self.visited:
+                    return i, j
+                
+class BFSBinarySearch(BFSPure):
     def __init__(self):
         super().__init__()
-
-        # ===== DFS (kill mode) =====
-        self.stack = []          # LIFO stack
-        self.visited = set()
-
-        # ===== Binary-style hunt =====
-        self.start_col = random.choice([4, 5])     # E or F
-        self.direction = random.choice([-1, 1])    # left or right
-
+        self.start_col = random.choice([4, 5])
+        self.direction = random.choice([-1, 1])  # initial direction
         self.row = 0
         self.col = self.start_col
-        self.phase = 'primary'    # primary → secondary
+        self.phase = 0  # 0 = first sweep, 1 = reverse sweep
 
-    def makeAttack(self, gamelogic):
-        self.steps += 1
-        # ================= DFS KILL MODE =================
-        if self.stack:
-            x, y, dx, dy = self.stack.pop()
+    def hunt_target(self, gamelogic):
+        while self.row < 10:
 
-            if (x, y) in self.visited:
-                return True
+            # VALID CELL
+            if 0 <= self.col < 10:
+                x, y = self.row, self.col
+                self.col += self.direction
 
-            self.visited.add((x, y))
+                if (x, y) not in self.visited:
+                    return x, y
 
-            if gamelogic[x][y] == 'O':   # HIT
-                self._hit(x, y, gamelogic)
+            # OUT OF BOUNDS → HANDLE DIRECTION SWITCH
+            else:
+                if self.phase == 0:
+                    # reverse direction from middle
+                    self.phase = 1
+                    self.direction *= -1
+                    self.col = self.start_col + self.direction
+                else:
+                    # BOTH DIRECTIONS DONE → NEXT ROW
+                    self.row += 1
+                    self.phase = 0
+                    self.direction = random.choice([-1, 1])
+                    self.start_col = random.choice([4, 5])
+                    self.col = self.start_col
 
-                # Continue deeper in SAME direction
-                nx, ny = x + dx, y + dy
-                if 0 <= nx < 10 and 0 <= ny < 10:
-                    self.stack.append((nx, ny, dx, dy))
+# DFS Combiniations
+class DFSRandom(DFSPure):
+    def hunt_target(self, gamelogic):
+        while True:
+            x = random.randint(0, 9)
+            y = random.randint(0, 9)
+            if (x, y) not in self.visited:
+                return x, y
+            
+class DFSLinearSearch(DFSPure):
+    def hunt_target(self, gamelogic):
+        for i in range(10):
+            for j in range(10):
+                if (i, j) not in self.visited:
+                    return i, j
+                
+class DFSBinarySearch(DFSPure):
+    def __init__(self):
+        super().__init__()
+        self.start_col = random.choice([4, 5])
+        self.direction = random.choice([-1, 1])
+        self.row = 0
+        self.col = self.start_col
+        self.phase = 0
 
-            else:  # MISS
-                self._miss(x, y, gamelogic)
-
-            self.turn = False
-            return False
-
-        # ================= BINARY SWEEP MODE =================
+    def hunt_target(self, gamelogic):
         while self.row < 10:
 
             if 0 <= self.col < 10:
                 x, y = self.row, self.col
                 self.col += self.direction
+
+                if (x, y) not in self.visited:
+                    return x, y
+
             else:
-                # Switch side or move to next row
-                if self.phase == 'primary':
-                    self.phase = 'secondary'
-                    self.col = 5 if self.start_col == 4 else 4
+                if self.phase == 0:
+                    self.phase = 1
                     self.direction *= -1
+                    self.col = self.start_col + self.direction
                 else:
-                    self.phase = 'primary'
-                    self.col = self.start_col
-                    self.direction *= -1
                     self.row += 1
-                continue
-
-            if (x, y) in self.visited:
-                continue
-
-            self.visited.add((x, y))
-
-            if gamelogic[x][y] == 'O':   # HIT
-                self._hit(x, y, gamelogic)
-
-                # Seed DFS stack with all directions
-                for dx, dy in [(-1,0),(1,0),(0,-1),(0,1)]:
-                    nx, ny = x + dx, y + dy
-                    if 0 <= nx < 10 and 0 <= ny < 10:
-                        self.stack.append((nx, ny, dx, dy))
-
-            else:
-                self._miss(x, y, gamelogic)
-
-            self.turn = False
-            return False
-
-        return False
-
-    # ---------------- Token helpers ----------------
-
-    def _hit(self, x, y, gamelogic):
-        gamelogic[x][y] = 'T'
-        TOKENS.append(Tokens(
-            REDTOKEN, pGameGrid[x][y], 'Hit',
-            FIRETOKENIMAGELIST, EXPLOSIONIMAGELIST, None
-        ))
-
-    def _miss(self, x, y, gamelogic):
-        gamelogic[x][y] = 'X'
-        TOKENS.append(Tokens(
-            BLUETOKEN, pGameGrid[x][y], 'Miss',
-            None, None, None
-        ))
-
-    def reset(self):
-        super().reset()
-        self.stack.clear()
-        self.visited.clear()
-
-        self.start_col = random.choice([4, 5])
-        self.direction = random.choice([-1, 1])
-        self.row = 0
-        self.col = self.start_col
-        self.phase = 'primary'
+                    self.phase = 0
+                    self.direction = random.choice([-1, 1])
+                    self.start_col = random.choice([4, 5])
+                    self.col = self.start_col
     
 
 class Tokens:
