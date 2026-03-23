@@ -518,6 +518,14 @@ class BFSBinarySearch(BFSPure):
                     self.start_col = random.choice([4, 5])
                     self.col = self.start_col
 
+    def reset(self):
+        super().reset()
+        self.start_col = random.choice([4, 5])
+        self.direction = random.choice([-1, 1])
+        self.row = 0
+        self.col = self.start_col
+        self.phase = 0
+
 # DFS Combiniations
 class DFSRandom(DFSPure):
     def hunt_target(self, gamelogic):
@@ -564,7 +572,15 @@ class DFSBinarySearch(DFSPure):
                     self.direction = random.choice([-1, 1])
                     self.start_col = random.choice([4, 5])
                     self.col = self.start_col
-    
+
+    def reset(self):
+        super().reset()
+        self.start_col = random.choice([4, 5])
+        self.direction = random.choice([-1, 1])
+        self.row = 0
+        self.col = self.start_col
+        self.phase = 0
+        
 
 class Tokens:
     def __init__(self, image, pos, action, imageList=None, explosionList=None, soundFile=None):
