@@ -330,7 +330,7 @@ class ComputerAI:
         self.turn = False
         self.steps = 0
         
-class BFSPure(ComputerAI):
+class BFSMain(ComputerAI):
     def __init__(self):
         super().__init__()
         self.queue = []
@@ -401,7 +401,7 @@ class BFSPure(ComputerAI):
     def hunt_target(self, gamelogic):
         raise NotImplementedError
     
-class DFSPure(ComputerAI):
+class DFSMain(ComputerAI):
     def __init__(self):
         super().__init__()
         self.stack = []
@@ -471,7 +471,7 @@ class DFSPure(ComputerAI):
         raise NotImplementedError
     
 #BFS Combinations
-class BFSRandom(BFSPure):
+class BFSRandom(BFSMain):
     def hunt_target(self, gamelogic):
         while True:
             x = random.randint(0, 9)
@@ -479,14 +479,14 @@ class BFSRandom(BFSPure):
             if (x, y) not in self.visited:
                 return x, y
             
-class BFSLinearSearch(BFSPure):
+class BFSLinearSearch(BFSMain):
     def hunt_target(self, gamelogic):
         for i in range(10):
             for j in range(10):
                 if (i, j) not in self.visited:
                     return i, j
                 
-class BFSBinarySearch(BFSPure):
+class BFSBinarySearch(BFSMain):
     def __init__(self):
         super().__init__()
         self.start_col = random.choice([4, 5])
@@ -527,7 +527,7 @@ class BFSBinarySearch(BFSPure):
         self.phase = 0
 
 # DFS Combiniations
-class DFSRandom(DFSPure):
+class DFSRandom(DFSMain):
     def hunt_target(self, gamelogic):
         while True:
             x = random.randint(0, 9)
@@ -535,14 +535,14 @@ class DFSRandom(DFSPure):
             if (x, y) not in self.visited:
                 return x, y
             
-class DFSLinearSearch(DFSPure):
+class DFSLinearSearch(DFSMain):
     def hunt_target(self, gamelogic):
         for i in range(10):
             for j in range(10):
                 if (i, j) not in self.visited:
                     return i, j
                 
-class DFSBinarySearch(DFSPure):
+class DFSBinarySearch(DFSMain):
     def __init__(self):
         super().__init__()
         self.start_col = random.choice([4, 5])
