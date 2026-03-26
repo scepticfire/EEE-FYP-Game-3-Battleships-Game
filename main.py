@@ -1,6 +1,7 @@
 #  Module Imports
 import pygame
 import random
+import asyncio
 
 #  Module Initialization
 pygame.init()
@@ -309,13 +310,9 @@ class Player:
                             if logicgrid[i][j] == 'O':
                                 TOKENS.append(Tokens(REDTOKEN, grid[i][j], 'Hit', None, None, None))
                                 logicgrid[i][j] = 'T'
-                                # SHOTSOUND.play()
-                                # HITSOUND.play()
                                 self.turn = False
                         else:
                             logicgrid[i][j] = 'X'
-                            # SHOTSOUND.play()
-                            # MISSSOUND.play()
                             TOKENS.append(Tokens(GREENTOKEN, grid[i][j], 'Miss', None, None, None))
                             self.turn = False
 
@@ -680,11 +677,24 @@ def showGridOnScreen(window, cellsize, playerGrid, computerGrid):
                 pygame.draw.rect(window, (255, 255, 255), (col[0], col[1], cellsize, cellsize), 1)
 
 
+# def loadImage(path, size, rotate=False):
+#     """A function to import the images into memory"""
+#     img = pygame.image.load(path).convert_alpha()
+#     img = pygame.transform.scale(img, size)
+#     if rotate == True:
+#         img = pygame.transform.rotate(img, -90)
+#     return img
+
 def loadImage(path, size, rotate=False):
-    """A function to import the images into memory"""
-    img = pygame.image.load(path).convert_alpha()
+    try:
+        print("LOADING:", path)
+        img = pygame.image.load(path).convert_alpha()
+    except Exception as e:
+        print("FAILED:", path, e)
+        raise e
+
     img = pygame.transform.scale(img, size)
-    if rotate == True:
+    if rotate:
         img = pygame.transform.rotate(img, -90)
     return img
 
@@ -886,8 +896,6 @@ def mainMenuScreen(window):
     for button in BUTTONS:
         button.active = (button.name == "Start")
         button.draw(window)
-
-
 
 def deploymentScreen(window):
     window.fill((0, 0, 0))
@@ -1220,80 +1228,7 @@ FLEET = {
 }
 STAGE = ['Main Menu', 'Deployment', 'Game Over']
 
-# Loading Game Variables
-pGameGrid = createGameGrid(ROWS, COLS, CELLSIZE, (50, 50))
-pGameLogic = createGameLogic(ROWS, COLS)
-pFleet = createFleet()
 
-cGameGrid = createGameGrid(ROWS, COLS, CELLSIZE, (LOGICAL_WIDTH - (ROWS * CELLSIZE), 50))
-cGameLogic = createGameLogic(ROWS, COLS)
-cFleet = createFleet()
-randomizeShipPositions(cFleet, cGameGrid)
-
-
-# Loading Game Images
-MAINMENUIMAGE = loadImage('assets/images/background/battleship.jpg', (LOGICAL_WIDTH // 3 * 2, LOGICAL_HEIGHT))
-ENDSCREENIMAGE = loadImage('assets/images/background/carrier.jpg', (LOGICAL_WIDTH, LOGICAL_HEIGHT))
-BACKGROUND = loadImage('assets/images/background/gamebg.png', (LOGICAL_WIDTH, LOGICAL_HEIGHT))
-PGAMEGRIDIMG = loadImage('assets/images/grids/player_grid.png', ((ROWS + 1) * CELLSIZE, (COLS + 1) * CELLSIZE))
-CGAMEGRIDIMG = loadImage('assets/images/grids/comp_grid.png', ((ROWS + 1) * CELLSIZE, (COLS + 1) * CELLSIZE))
-BUTTONIMAGE = loadImage('assets/images/buttons/button.png', (150, 50))
-BUTTONIMAGE1 = loadImage('assets/images/buttons/button.png', (250, 100))
-BUTTONS = [
-    Button(BUTTONIMAGE, (150, 50), (25, 900), 'Randomize'),
-    Button(BUTTONIMAGE, (150, 50), (200, 900), 'Reset'),
-    Button(BUTTONIMAGE, (150, 50), (375, 900), 'Deploy'),
-    Button(BUTTONIMAGE1, (250, 100), (900, LOGICAL_HEIGHT // 2 + 150), 'Start')
-]
-
-# --- AI Algorithm Buttons ---
-AI_BUTTONS = [
-    Button(BUTTONIMAGE, (150, 50), (430, 150), 'BFS'),
-    Button(BUTTONIMAGE, (150, 50), (600, 150), 'DFS'),
-]
-
-# --- AI Behaviour Buttons ---
-BEHAVIOUR_BUTTONS = [
-    Button(BUTTONIMAGE, (150, 50), (300, 300), 'Random'),
-    Button(BUTTONIMAGE, (150, 50), (500, 300), 'Linear Search'),
-    Button(BUTTONIMAGE, (150, 50), (700, 300), 'Binary Search')
-]
-
-START_BUTTON = Button(BUTTONIMAGE1, (250, 100), (505, 450), 'Start')
-
-LEFT_GRID_RIGHT = (ROWS * CELLSIZE)
-RIGHT_GRID_LEFT = LOGICAL_WIDTH - (ROWS * CELLSIZE)
-MID_X = (LEFT_GRID_RIGHT + RIGHT_GRID_LEFT) // 2
-
-AUTOPLAY_BUTTON = Button(
-    BUTTONIMAGE,
-    (150, 50),
-    (MID_X - 75, 140),   # center horizontally, below step counter
-    'Autoplay'
-)
-
-
-REDTOKEN = loadImage('assets/images/tokens/redtoken.png', (CELLSIZE, CELLSIZE))
-GREENTOKEN = loadImage('assets/images/tokens/greentoken.png', (CELLSIZE, CELLSIZE))
-BLUETOKEN = loadImage('assets/images/tokens/bluetoken.png', (CELLSIZE, CELLSIZE))
-FIRETOKENIMAGELIST = loadAnimationImages('assets/images/tokens/fireloop/fire1_', 13, (CELLSIZE, CELLSIZE))
-EXPLOSIONSPRITESHEET = pygame.image.load('assets/images/tokens/explosion/explosion.png').convert_alpha()
-EXPLOSIONIMAGELIST = []
-for row in range(8):
-    for col in range(8):
-        EXPLOSIONIMAGELIST.append(loadSpriteSheetImages(EXPLOSIONSPRITESHEET, col, row, (CELLSIZE, CELLSIZE), (128, 128)))
-TOKENS = []
-RADARGRIDIMAGES = loadAnimationImages('assets/images/radar_base/radar_anim', 360, (ROWS * CELLSIZE, COLS * CELLSIZE))
-RADARBLIPIMAGES = loadAnimationImages('assets/images/radar_blip/blip_', 11, (50, 50))
-RADARGRID = loadImage('assets/images/grids/grid_faint.png', ((ROWS) * CELLSIZE, (COLS) * CELLSIZE))
-
-# Loading Game Sounds
-# HITSOUND = pygame.mixer.Sound('assets/sounds/explosion.wav')
-# HITSOUND.set_volume(0.05)
-# SHOTSOUND = pygame.mixer.Sound('assets/sounds/gunshot.wav')
-# SHOTSOUND.set_volume(0.05)
-# MISSSOUND = pygame.mixer.Sound('assets/sounds/splash.wav')
-# MISSSOUND.set_volume(0.05)
 
 AI_INFO = {
     "BFSRandom": {
@@ -1367,155 +1302,240 @@ AI_CLASS_MAP = {
     ('DFS', 'Binary Search'): DFSBinarySearch,
 }
 
-#  Initialise Players
-player1 = Player()
-computer = BFSRandom()
-
-#  Main Game Loop
-RUNGAME = True
-while RUNGAME:
 
 
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            RUNGAME = False
-        elif event.type == pygame.KEYDOWN:
-            if event.key == pygame.K_SPACE and GAME_OVER:
-                fullGameReset()
-                GAMESTATE = 'AI Config'
-        elif event.type == pygame.MOUSEBUTTONDOWN:
-            if event.button == 1:
-                # AUTOPLAY TOGGLE
-                if (AUTOPLAY_BUTTON.active and
-                    AUTOPLAY_BUTTON.rect.collidepoint(get_logical_mouse_pos())):
+async def main():
+    global GAMESTATE, AUTOPLAY, TURNTIMER, SELECTED_AI, SELECTED_BEHAVIOUR
+    global DEPLOYMENT, GAME_OVER, WINNER, SCANNER, INDNUM, BLIPPOSITION
+    global computer, pGameLogic, cGameLogic
+    global MAINMENUIMAGE, ENDSCREENIMAGE, BACKGROUND, PGAMEGRIDIMG, CGAMEGRIDIMG
+    global BUTTONIMAGE, BUTTONIMAGE1, BUTTONS, AI_BUTTONS, BEHAVIOUR_BUTTONS
+    global START_BUTTON, AUTOPLAY_BUTTON, REDTOKEN, GREENTOKEN, BLUETOKEN
+    global FIRETOKENIMAGELIST, EXPLOSIONIMAGELIST, EXPLOSIONSPRITESHEET
+    global RADARGRIDIMAGES, RADARBLIPIMAGES, RADARGRID, TOKENS
+    global pFleet, cFleet, pGameGrid, cGameLogic, pGameLogic, cGameGrid
+    global MID_X, LEFT_GRID_RIGHT, RIGHT_GRID_LEFT, player1, computer
+    
+    # Let pygbag mount the virtual filesystem FIRST
+    for _ in range(10):
+        await asyncio.sleep(0)
+    # Loading Game Variables
+    pGameGrid = createGameGrid(ROWS, COLS, CELLSIZE, (50, 50))
+    pGameLogic = createGameLogic(ROWS, COLS)
+    pFleet = createFleet()
 
-                    AUTOPLAY = not AUTOPLAY
-                    TURNTIMER = pygame.time.get_ticks()
-                # ================= AI CONFIG SCREEN =================
-                if GAMESTATE == 'AI Config':
+    cGameGrid = createGameGrid(ROWS, COLS, CELLSIZE, (LOGICAL_WIDTH - (ROWS * CELLSIZE), 50))
+    cGameLogic = createGameLogic(ROWS, COLS)
+    cFleet = createFleet()
+    randomizeShipPositions(cFleet, cGameGrid)
 
-                    # Select AI algorithm
-                    for btn in AI_BUTTONS:
-                        if btn.rect.collidepoint(get_logical_mouse_pos()):
-                            SELECTED_AI = btn.name
 
-                    # Select AI Behaviour 
-                    for btn in BEHAVIOUR_BUTTONS:
-                        if btn.rect.collidepoint(get_logical_mouse_pos()):
-                            SELECTED_BEHAVIOUR = btn.name
+    # Loading Game Images
+    MAINMENUIMAGE = loadImage('assets/images/background/battleship.jpg', (LOGICAL_WIDTH // 3 * 2, LOGICAL_HEIGHT))
+    ENDSCREENIMAGE = loadImage('assets/images/background/carrier.jpg', (LOGICAL_WIDTH, LOGICAL_HEIGHT))
+    BACKGROUND = loadImage('assets/images/background/gamebg.png', (LOGICAL_WIDTH, LOGICAL_HEIGHT))
+    PGAMEGRIDIMG = loadImage('assets/images/grids/player_grid.png', ((ROWS + 1) * CELLSIZE, (COLS + 1) * CELLSIZE))
+    CGAMEGRIDIMG = loadImage('assets/images/grids/comp_grid.png', ((ROWS + 1) * CELLSIZE, (COLS + 1) * CELLSIZE))
+    BUTTONIMAGE = loadImage('assets/images/buttons/button.png', (150, 50))
+    BUTTONIMAGE1 = loadImage('assets/images/buttons/button.png', (250, 100))
+    BUTTONS = [
+        Button(BUTTONIMAGE, (150, 50), (25, 900), 'Randomize'),
+        Button(BUTTONIMAGE, (150, 50), (200, 900), 'Reset'),
+        Button(BUTTONIMAGE, (150, 50), (375, 900), 'Deploy'),
+        Button(BUTTONIMAGE1, (250, 100), (900, LOGICAL_HEIGHT // 2 + 150), 'Start')
+    ]
 
-                    # Start game (only if both selected)
-                    if START_BUTTON.active and START_BUTTON.rect.collidepoint(get_logical_mouse_pos()):
+    # --- AI Algorithm Buttons ---
+    AI_BUTTONS = [
+        Button(BUTTONIMAGE, (150, 50), (430, 150), 'BFS'),
+        Button(BUTTONIMAGE, (150, 50), (600, 150), 'DFS'),
+    ]
 
-                        # BFS + Random Selected
-                        if SELECTED_AI == 'BFS' and SELECTED_BEHAVIOUR == 'Random':
-                            computer = BFSRandom()
-                            fullGameReset()
+    # --- AI Behaviour Buttons ---
+    BEHAVIOUR_BUTTONS = [
+        Button(BUTTONIMAGE, (150, 50), (300, 300), 'Random'),
+        Button(BUTTONIMAGE, (150, 50), (500, 300), 'Linear Search'),
+        Button(BUTTONIMAGE, (150, 50), (700, 300), 'Binary Search')
+    ]
+
+    START_BUTTON = Button(BUTTONIMAGE1, (250, 100), (505, 450), 'Start')
+
+    LEFT_GRID_RIGHT = (ROWS * CELLSIZE)
+    RIGHT_GRID_LEFT = LOGICAL_WIDTH - (ROWS * CELLSIZE)
+    MID_X = (LEFT_GRID_RIGHT + RIGHT_GRID_LEFT) // 2
+
+    AUTOPLAY_BUTTON = Button(
+        BUTTONIMAGE,
+        (150, 50),
+        (MID_X - 75, 140),   # center horizontally, below step counter
+        'Autoplay'
+    )
+
+
+    REDTOKEN = loadImage('assets/images/tokens/redtoken.png', (CELLSIZE, CELLSIZE))
+    GREENTOKEN = loadImage('assets/images/tokens/greentoken.png', (CELLSIZE, CELLSIZE))
+    BLUETOKEN = loadImage('assets/images/tokens/bluetoken.png', (CELLSIZE, CELLSIZE))
+    FIRETOKENIMAGELIST = loadAnimationImages('assets/images/tokens/fireloop/fire1_', 13, (CELLSIZE, CELLSIZE))
+    EXPLOSIONSPRITESHEET = pygame.image.load('assets/images/tokens/explosion/explosion.png').convert_alpha()
+    EXPLOSIONIMAGELIST = []
+    for row in range(8):
+        for col in range(8):
+            EXPLOSIONIMAGELIST.append(loadSpriteSheetImages(EXPLOSIONSPRITESHEET, col, row, (CELLSIZE, CELLSIZE), (128, 128)))
+    TOKENS = []
+    RADARGRIDIMAGES = loadAnimationImages('assets/images/radar_base/radar_anim', 360, (ROWS * CELLSIZE, COLS * CELLSIZE))
+    RADARBLIPIMAGES = loadAnimationImages('assets/images/radar_blip/blip_', 11, (50, 50))
+    RADARGRID = loadImage('assets/images/grids/grid_faint.png', ((ROWS) * CELLSIZE, (COLS) * CELLSIZE))
+
+    #  Initialise Players
+    player1 = Player()
+    computer = BFSRandom()
+    #  Main Game Loop
+    RUNGAME = True
+    while RUNGAME:
+        
+        
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                RUNGAME = False
+            elif event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_SPACE and GAME_OVER:
+                    fullGameReset()
+                    GAMESTATE = 'AI Config'
+            elif event.type == pygame.MOUSEBUTTONDOWN:
+                if event.button == 1:
+                    # AUTOPLAY TOGGLE
+                    if (AUTOPLAY_BUTTON.active and
+                        AUTOPLAY_BUTTON.rect.collidepoint(get_logical_mouse_pos())):
+
+                        AUTOPLAY = not AUTOPLAY
+                        TURNTIMER = pygame.time.get_ticks()
+                    # ================= AI CONFIG SCREEN =================
+                    if GAMESTATE == 'AI Config':
+
+                        # Select AI algorithm
+                        for btn in AI_BUTTONS:
+                            if btn.rect.collidepoint(get_logical_mouse_pos()):
+                                SELECTED_AI = btn.name
+
+                        # Select AI Behaviour 
+                        for btn in BEHAVIOUR_BUTTONS:
+                            if btn.rect.collidepoint(get_logical_mouse_pos()):
+                                SELECTED_BEHAVIOUR = btn.name
+
+                        # Start game (only if both selected)
+                        if START_BUTTON.active and START_BUTTON.rect.collidepoint(get_logical_mouse_pos()):
+
+                            # BFS + Random Selected
+                            if SELECTED_AI == 'BFS' and SELECTED_BEHAVIOUR == 'Random':
+                                computer = BFSRandom()
+                                fullGameReset()
+                                GAMESTATE = 'Deployment'
+                            if SELECTED_AI == 'BFS' and SELECTED_BEHAVIOUR == 'Linear Search':
+                                computer = BFSLinearSearch()
+                                fullGameReset()
+                                GAMESTATE = 'Deployment'
+                            if SELECTED_AI == 'BFS' and SELECTED_BEHAVIOUR == 'Binary Search':
+                                computer = BFSBinarySearch()
+                                fullGameReset()
+                                GAMESTATE = 'Deployment'
+                            if SELECTED_AI == 'DFS' and SELECTED_BEHAVIOUR == 'Random':
+                                computer = DFSRandom()
+                                fullGameReset()
+                                GAMESTATE = 'Deployment'
+                            if SELECTED_AI == 'DFS' and SELECTED_BEHAVIOUR == 'Linear Search':
+                                computer = DFSLinearSearch()
+                                fullGameReset()
+                                GAMESTATE = 'Deployment'
+                            if SELECTED_AI == 'DFS' and SELECTED_BEHAVIOUR == 'Binary Search':
+                                computer = DFSBinarySearch()
+                                fullGameReset()
+                                GAMESTATE = 'Deployment'
+
+                            # Reset game state
+                            TOKENS.clear()
+                            pGameLogic = createGameLogic(ROWS, COLS)
+                            cGameLogic = createGameLogic(ROWS, COLS)
+                            updateGameLogic(pGameGrid, pFleet, pGameLogic)
+                            updateGameLogic(cGameGrid, cFleet, cGameLogic)
+
+                            DEPLOYMENT = True
                             GAMESTATE = 'Deployment'
-                        if SELECTED_AI == 'BFS' and SELECTED_BEHAVIOUR == 'Linear Search':
-                            computer = BFSLinearSearch()
-                            fullGameReset()
-                            GAMESTATE = 'Deployment'
-                        if SELECTED_AI == 'BFS' and SELECTED_BEHAVIOUR == 'Binary Search':
-                            computer = BFSBinarySearch()
-                            fullGameReset()
-                            GAMESTATE = 'Deployment'
-                        if SELECTED_AI == 'DFS' and SELECTED_BEHAVIOUR == 'Random':
-                            computer = DFSRandom()
-                            fullGameReset()
-                            GAMESTATE = 'Deployment'
-                        if SELECTED_AI == 'DFS' and SELECTED_BEHAVIOUR == 'Linear Search':
-                            computer = DFSLinearSearch()
-                            fullGameReset()
-                            GAMESTATE = 'Deployment'
-                        if SELECTED_AI == 'DFS' and SELECTED_BEHAVIOUR == 'Binary Search':
-                            computer = DFSBinarySearch()
-                            fullGameReset()
-                            GAMESTATE = 'Deployment'
 
-                        # Reset game state
-                        TOKENS.clear()
-                        pGameLogic = createGameLogic(ROWS, COLS)
-                        cGameLogic = createGameLogic(ROWS, COLS)
-                        updateGameLogic(pGameGrid, pFleet, pGameLogic)
-                        updateGameLogic(cGameGrid, cFleet, cGameLogic)
+                    if DEPLOYMENT == True:
+                        for ship in pFleet:
+                            if ship.rect.collidepoint(get_logical_mouse_pos()):
+                                ship.active = True
+                                sortFleet(ship, pFleet)
+                                ship.selectShipAndMove()
 
-                        DEPLOYMENT = True
-                        GAMESTATE = 'Deployment'
+                    else:
+                    # Only allow manual attack if AUTOPLAY is OFF
+                        if not AUTOPLAY and player1.turn and not GAME_OVER:
+                            player1.makeAttack(cGameGrid, cGameLogic)
 
-                if DEPLOYMENT == True:
-                    for ship in pFleet:
-                        if ship.rect.collidepoint(get_logical_mouse_pos()):
-                            ship.active = True
-                            sortFleet(ship, pFleet)
-                            ship.selectShipAndMove()
+                            if not player1.turn:
+                                TURNTIMER = pygame.time.get_ticks()
 
-                else:
-                # Only allow manual attack if AUTOPLAY is OFF
-                    if not AUTOPLAY and player1.turn and not GAME_OVER:
-                        player1.makeAttack(cGameGrid, cGameLogic)
-
-                        if not player1.turn:
-                            TURNTIMER = pygame.time.get_ticks()
-
-                for button in BUTTONS:
-                    if button.rect.collidepoint(get_logical_mouse_pos()):
-                        if button.name == 'Deploy' and button.active == True:
-                            status = deploymentPhase(DEPLOYMENT)
-                            DEPLOYMENT = status
-                        elif button.name == 'Redeploy' and button.active == True:
-                            status = deploymentPhase(DEPLOYMENT)
-                            DEPLOYMENT = status
-                        elif button.name == 'Quit' and button.active == True:
-                            RUNGAME = False
-                        elif button.name == 'Radar Scan' and button.active == True:
-                            if not AUTOPLAY and not GAME_OVER:
-                                SCANNER = True
-                                INDNUM = 0
-                                BLIPPOSITION = pick_random_ship_location(cGameLogic)
-                            INDNUM = 0
-                            BLIPPOSITION = pick_random_ship_location(cGameLogic)
-                        elif button.name == 'Start' and button.active:
-                            GAMESTATE = 'AI Config'
-                            if GAMESTATE == 'Game Over':
-                                TOKENS.clear()
-                                for ship in pFleet:
-                                    ship.returnToDefaultPosition()
-                                randomizeShipPositions(cFleet, cGameGrid)
-                                pGameLogic = createGameLogic(ROWS, COLS)
-                                updateGameLogic(pGameGrid, pFleet, pGameLogic)
-                                cGameLogic = createGameLogic(ROWS, COLS)
-                                updateGameLogic(cGameGrid, cFleet, cGameLogic)
+                    for button in BUTTONS:
+                        if button.rect.collidepoint(get_logical_mouse_pos()):
+                            if button.name == 'Deploy' and button.active == True:
                                 status = deploymentPhase(DEPLOYMENT)
                                 DEPLOYMENT = status
-                            #GAMESTATE = STAGE[1]
-                        button.actionOnPress()
+                            elif button.name == 'Redeploy' and button.active == True:
+                                status = deploymentPhase(DEPLOYMENT)
+                                DEPLOYMENT = status
+                            elif button.name == 'Quit' and button.active == True:
+                                RUNGAME = False
+                            elif button.name == 'Radar Scan' and button.active == True:
+                                if not AUTOPLAY and not GAME_OVER:
+                                    SCANNER = True
+                                    INDNUM = 0
+                                    BLIPPOSITION = pick_random_ship_location(cGameLogic)
+                                INDNUM = 0
+                                BLIPPOSITION = pick_random_ship_location(cGameLogic)
+                            elif button.name == 'Start' and button.active:
+                                GAMESTATE = 'AI Config'
+                                if GAMESTATE == 'Game Over':
+                                    TOKENS.clear()
+                                    for ship in pFleet:
+                                        ship.returnToDefaultPosition()
+                                    randomizeShipPositions(cFleet, cGameGrid)
+                                    pGameLogic = createGameLogic(ROWS, COLS)
+                                    updateGameLogic(pGameGrid, pFleet, pGameLogic)
+                                    cGameLogic = createGameLogic(ROWS, COLS)
+                                    updateGameLogic(cGameGrid, cFleet, cGameLogic)
+                                    status = deploymentPhase(DEPLOYMENT)
+                                    DEPLOYMENT = status
+                                #GAMESTATE = STAGE[1]
+                            button.actionOnPress()
 
 
-            elif event.button == 3:
-                if DEPLOYMENT == True:
-                    for ship in pFleet:
-                        if ship.rect.collidepoint(get_logical_mouse_pos()) and not ship.checkForRotateCollisions(pFleet):
-                            ship.rotateShip(True)
+                elif event.button == 3:
+                    if DEPLOYMENT == True:
+                        for ship in pFleet:
+                            if ship.rect.collidepoint(get_logical_mouse_pos()) and not ship.checkForRotateCollisions(pFleet):
+                                ship.rotateShip(True)
 
-    updateGameScreen(GAMESCREEN, GAMESTATE)
-    if SCANNER == True:
-        INDNUM += 1
+        updateGameScreen(GAMESCREEN, GAMESTATE)
+        if SCANNER == True:
+            INDNUM += 1
 
-    if GAMESTATE == 'Deployment' and DEPLOYMENT != True:
-        player1Wins = checkForWinners(cGameLogic)
-        computerWins = checkForWinners(pGameLogic)
-        if player1Wins:
-            GAME_OVER = True
-            WINNER = 'PLAYER'
+        if GAMESTATE == 'Deployment' and DEPLOYMENT != True:
+            player1Wins = checkForWinners(cGameLogic)
+            computerWins = checkForWinners(pGameLogic)
+            if player1Wins:
+                GAME_OVER = True
+                WINNER = 'PLAYER'
 
-        elif computerWins:
-            GAME_OVER = True
-            WINNER = 'AI'
+            elif computerWins:
+                GAME_OVER = True
+                WINNER = 'AI'
 
-    if not GAME_OVER:
-        takeTurns(player1, computer)
+        if not GAME_OVER:
+            takeTurns(player1, computer)
 
-    #takeTurns(player1, computer)
+        await asyncio.sleep(0)
 
-pygame.quit()
+    pygame.quit()
+
+asyncio.run(main())
