@@ -1027,7 +1027,7 @@ def aiConfigScreen(window):
 
     # Bottom image
     bottom_img = loadImage(
-        'assets/images/background/Battleship bottom image.webp',
+        'assets/images/background/battleship_bottom_image.webp',
         (LOGICAL_WIDTH, 300)
     )
     window.blit(bottom_img, (0, LOGICAL_HEIGHT - 300))
@@ -1209,13 +1209,13 @@ FLEET = {
                 2, 'assets/images/ships/cruiser/cruisergun.png', (0.4, 0.125), [-0.36, 0.64]],
     'destroyer': ['destroyer', 'assets/images/ships/destroyer/destroyer.png', (275, 600), (30, 145),
                   2, 'assets/images/ships/destroyer/destroyergun.png', (0.5, 0.15), [-0.52, 0.71]],
-    'patrol boat': ['patrol boat', 'assets/images/ships/patrol boat/patrol boat.png', (425, 600), (20, 95),
+    'patrol boat': ['patrol boat', 'assets/images/ships/patrol_boat/patrol_boat.png', (425, 600), (20, 95),
                     0, '', None, None],
     'submarine': ['submarine', 'assets/images/ships/submarine/submarine.png', (350, 600), (30, 145),
                   1, 'assets/images/ships/submarine/submarinegun.png', (0.25, 0.125), [-0.45]],
     'carrier': ['carrier', 'assets/images/ships/carrier/carrier.png', (50, 600), (45, 245),
                 0, '', None, None],
-    'rescue ship': ['rescue ship', 'assets/images/ships/rescue ship/rescue ship.png', (500, 600), (20, 95),
+    'rescue ship': ['rescue ship', 'assets/images/ships/rescue_ship/rescue_ship.png', (500, 600), (20, 95),
                     0, '', None, None]
 }
 STAGE = ['Main Menu', 'Deployment', 'Game Over']
@@ -1232,8 +1232,8 @@ randomizeShipPositions(cFleet, cGameGrid)
 
 
 # Loading Game Images
-MAINMENUIMAGE = loadImage('assets/images/background/Battleship.jpg', (LOGICAL_WIDTH // 3 * 2, LOGICAL_HEIGHT))
-ENDSCREENIMAGE = loadImage('assets/images/background/Carrier.jpg', (LOGICAL_WIDTH, LOGICAL_HEIGHT))
+MAINMENUIMAGE = loadImage('assets/images/background/battleship.jpg', (LOGICAL_WIDTH // 3 * 2, LOGICAL_HEIGHT))
+ENDSCREENIMAGE = loadImage('assets/images/background/carrier.jpg', (LOGICAL_WIDTH, LOGICAL_HEIGHT))
 BACKGROUND = loadImage('assets/images/background/gamebg.png', (LOGICAL_WIDTH, LOGICAL_HEIGHT))
 PGAMEGRIDIMG = loadImage('assets/images/grids/player_grid.png', ((ROWS + 1) * CELLSIZE, (COLS + 1) * CELLSIZE))
 CGAMEGRIDIMG = loadImage('assets/images/grids/comp_grid.png', ((ROWS + 1) * CELLSIZE, (COLS + 1) * CELLSIZE))
@@ -1276,7 +1276,7 @@ AUTOPLAY_BUTTON = Button(
 REDTOKEN = loadImage('assets/images/tokens/redtoken.png', (CELLSIZE, CELLSIZE))
 GREENTOKEN = loadImage('assets/images/tokens/greentoken.png', (CELLSIZE, CELLSIZE))
 BLUETOKEN = loadImage('assets/images/tokens/bluetoken.png', (CELLSIZE, CELLSIZE))
-FIRETOKENIMAGELIST = loadAnimationImages('assets/images/tokens/fireloop/fire1_ ', 13, (CELLSIZE, CELLSIZE))
+FIRETOKENIMAGELIST = loadAnimationImages('assets/images/tokens/fireloop/fire1_', 13, (CELLSIZE, CELLSIZE))
 EXPLOSIONSPRITESHEET = pygame.image.load('assets/images/tokens/explosion/explosion.png').convert_alpha()
 EXPLOSIONIMAGELIST = []
 for row in range(8):
@@ -1284,7 +1284,7 @@ for row in range(8):
         EXPLOSIONIMAGELIST.append(loadSpriteSheetImages(EXPLOSIONSPRITESHEET, col, row, (CELLSIZE, CELLSIZE), (128, 128)))
 TOKENS = []
 RADARGRIDIMAGES = loadAnimationImages('assets/images/radar_base/radar_anim', 360, (ROWS * CELLSIZE, COLS * CELLSIZE))
-RADARBLIPIMAGES = loadAnimationImages('assets/images/radar_blip/Blip_', 11, (50, 50))
+RADARBLIPIMAGES = loadAnimationImages('assets/images/radar_blip/blip_', 11, (50, 50))
 RADARGRID = loadImage('assets/images/grids/grid_faint.png', ((ROWS) * CELLSIZE, (COLS) * CELLSIZE))
 
 # Loading Game Sounds
